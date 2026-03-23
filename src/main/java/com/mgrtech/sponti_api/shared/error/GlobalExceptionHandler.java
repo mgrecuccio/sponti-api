@@ -1,52 +1,52 @@
 package com.mgrtech.sponti_api.shared.error;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
-        ApiErrorResponse body = new ApiErrorResponse(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI()
-        );
-        return ResponseEntity.badRequest().body(body);
+    @ExceptionHandler(EmailAlreadyUsedException.class)
+    ProblemDetail handleEmailAlreadyUsed(EmailAlreadyUsedException ex, HttpServletRequest request) {
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<ValidationErrorResponse> handleValidation(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request
-    ) {
-        Map<String, String> errors = new LinkedHashMap<>();
+    @ExceptionHandler({
+            BadCredentialsException.class,
+            InvalidRefreshTokenException.class
+    })
+    ProblemDetail handleUnauthorized(RuntimeException ex, HttpServletRequest request) {
+        return problem(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
+    }
 
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            errors.put(fieldError.getField(), fieldError.getDefaultMessage());
-        }
+    @ExceptionHandler(UserNotFoundException.class)
+    ProblemDetail handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
 
-        ValidationErrorResponse body = new ValidationErrorResponse(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Validation failed",
-                request.getRequestURI(),
-                errors
-        );
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ConstraintViolationException.class,
+            IllegalArgumentException.class
+    })
+    ProblemDetail handleBadRequest(Exception ex, HttpServletRequest request) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid request", request.getRequestURI());
+    }
 
-        return ResponseEntity.badRequest().body(body);
+    @ExceptionHandler(UnsupportedAuthenticationException.class)
+    ProblemDetail handleUnsupportedAuthentication(Exception ex, HttpServletRequest request) {
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request.getRequestURI());
+    }
+
+    private ProblemDetail problem(HttpStatus status, String detail, String path) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(status.getReasonPhrase());
+        problem.setProperty("path", path);
+        return problem;
     }
 }

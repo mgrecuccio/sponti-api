@@ -101,7 +101,7 @@ http://localhost:8080/swagger-ui.html
 
 ---
 
-## 🔐 Authentication (WIP)
+## 🔐 Authentication
 
 Authentication is being implemented using **JWT (Bearer tokens)**.
 
@@ -160,16 +160,16 @@ No local DB setup required.
 
 ---
 
-### Phase 2 — Authentication 🔄
+### Phase 2 — Authentication ✅
 
-* [ ] JWT access token
-* [ ] Refresh token persistence
-* [ ] Authentication filter
-* [ ] `/users/me` endpoint
+* [x] JWT access token
+* [x] Refresh token persistence
+* [x] Authentication filter
+* [x] `/users/me` endpoint
 
 ---
 
-### Phase 3 — Contacts
+### Phase 3 — Contacts 🔄
 
 * [ ] Contact invitations
 * [ ] Accept / decline flow

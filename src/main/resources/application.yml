@@ -26,5 +26,6 @@ app:
   security:
     jwt:
       secret: "0123456789012345678901234567890123456789012345678901234567890123"
+      issuer: sponti-api
       access-token-minutes: 15
       refresh-token-days: 30
