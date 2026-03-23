@@ -1,0 +1,181 @@
+Sponti API - Authentication Architecture (Confluence Ready)
+
+1. Overview
+
+The Sponti API authentication system is designed as a secure, scalable,
+and modular solution based on JWT (JSON Web Tokens) with refresh token
+support. It follows Spring Modulith principles, enforcing strict module
+boundaries and clear separation of responsibilities.
+
+------------------------------------------------------------------------
+
+2. Core Design Decisions
+
+2.1 Stateless Authentication
+
+-   Access tokens are stateless JWTs
+-   No server-side session storage required
+-   Enables horizontal scalability
+
+2.2 Token-Based Security
+
+-   Access Token → short-lived, used for API calls
+-   Refresh Token → long-lived, used to renew sessions
+
+------------------------------------------------------------------------
+
+3. JWT (Access Token)
+
+Characteristics
+
+-   Short-lived (minutes)
+-   Signed using HMAC secret
+-   Contains minimal claims:
+    -   sub → userId
+    -   email
+    -   roles
+
+Why minimal claims?
+
+-   Reduces token size
+-   Limits exposure if compromised
+-   Keeps authorization logic server-side
+
+------------------------------------------------------------------------
+
+4. Refresh Token Mechanism
+
+Design
+
+-   Generated using SecureRandom (32 bytes)
+-   Encoded using Base64 URL-safe
+-   Stored in DB as SHA-256 hash
+-   Raw token returned only once
+
+Rotation Strategy
+
+-   Each refresh request invalidates the old token
+-   A new refresh token is issued
+-   Old token is marked as revoked
+
+Benefits
+
+-   Prevents replay attacks
+-   Enables session invalidation
+-   Limits impact of token leakage
+
+------------------------------------------------------------------------
+
+5. Password Handling
+
+Current Implementation
+
+-   Spring Security PasswordEncoder
+-   Argon2id (memory-hard, more modern)
+
+
+Strategy
+
+-   Passwords never stored in plain text
+-   Hashing done during registration
+-   Validation via passwordEncoder.matches()
+
+------------------------------------------------------------------------
+
+6. Authentication Flows
+
+Registration Flow
+
+1.  Client sends email + password + displayName
+2.  Auth module:
+    -   Normalizes email
+    -   Hashes password
+    -   Sends CreateUserCommand to user module
+3.  User module persists user
+4.  Auth issues tokens
+
+Login Flow
+
+1.  Client sends credentials
+2.  Auth retrieves user via UserCredentialsQuery
+3.  Password verified
+4.  Tokens issued
+
+Refresh Flow
+
+1.  Client sends refresh token
+2.  Auth validates + rotates token
+3.  Loads user
+4.  Issues new access + refresh tokens
+
+------------------------------------------------------------------------
+
+7. Security Integration
+
+JWT Filter
+
+-   Reads Authorization header
+-   Validates token
+-   Extracts userId + roles
+-   Populates SecurityContext
+
+Principal Design
+
+-   Principal = userId (String)
+-   Avoids cross-module dependency
+-   Other modules use Authentication to extract userId
+
+------------------------------------------------------------------------
+
+8. Modulith Architecture
+
+Auth Module Responsibilities
+
+-   Authentication orchestration
+-   Password hashing
+-   Token generation/validation
+
+User Module Responsibilities
+
+-   User persistence
+-   Credential lookup
+-   Business rules
+
+------------------------------------------------------------------------
+
+9. Command / Query Separation
+
+Commands
+
+-   Represent state changes
+-   Example: CreateUserCommand
+-   Executed via facade
+
+Queries
+
+-   Read-only operations
+-   Example: UserCredentialsQuery
+
+Why this approach?
+
+-   Enforces module boundaries
+-   Improves clarity and maintainability
+-   Prepares system for CQRS evolution
+
+------------------------------------------------------------------------
+
+10. Security Best Practices Applied
+
+-   Hashing sensitive data (passwords, refresh tokens)
+-   Token rotation
+-   Minimal JWT payload
+-   Stateless architecture
+-   Clear module ownership
+
+------------------------------------------------------------------------
+
+11. Future Improvements
+
+-   Device/session tracking
+-   Advanced anomaly detection
+-   Fine-grained authorization

@@ -1,4 +1,2 @@
-/**
- * Auth application module.
- */
-package com.mgrtech.sponti_api.auth;
+@org.springframework.modulith.NamedInterface("api")
+package com.mgrtech.sponti_api.auth.api;
