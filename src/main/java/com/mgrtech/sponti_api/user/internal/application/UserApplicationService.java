@@ -1,13 +1,7 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
-import com.mgrtech.sponti_api.user.api.UserCredentialsQuery;
-import com.mgrtech.sponti_api.user.api.UserQueryFacade;
-import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
-import com.mgrtech.sponti_api.user.api.CreateUserCommand;
-import com.mgrtech.sponti_api.user.api.CreatedUserView;
-import com.mgrtech.sponti_api.user.api.UserCredentialsView;
-import com.mgrtech.sponti_api.user.api.UserProfileView;
+import com.mgrtech.sponti_api.user.api.*;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
 import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -15,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 
 @Service
 @AllArgsConstructor
@@ -37,9 +33,17 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<UserProfileView> getProfileById(Long userId) {
         return userRepository.findById(userId)
                 .map(this::toProfileView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserLookupView> findByEmailForLookup(String email) {
+        return userRepository.findByEmail(email)
+                .map(this::toLookupView);
     }
 
     @Override
@@ -66,10 +70,6 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
         );
     }
 
-    private String normalizeEmail(String email) {
-        return email.trim().toLowerCase();
-    }
-
     private UserCredentialsView toCredentialsView(UserEntity user) {
         return new UserCredentialsView(
                 user.getId(),
@@ -85,5 +85,9 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
                 user.getDisplayName(),
                 user.getStatusAsString()
         );
+    }
+
+    private UserLookupView toLookupView(UserEntity user) {
+        return new UserLookupView(user.getId(), user.getEmail());
     }
 }

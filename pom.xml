@@ -189,6 +189,17 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<!-- for local development only -->
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<configuration>
+					<url>jdbc:postgresql://localhost:5432/sponti</url>
+					<user>sponti</user>
+					<password>sponti</password>
+					<cleanDisabled>true</cleanDisabled>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

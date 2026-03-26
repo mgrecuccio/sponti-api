@@ -1,11 +1,15 @@
 create table if not exists users (
     id bigserial primary key,
     email varchar(255) not null unique,
+    phone_number varchar(255) unique,
+    phone_number_verified boolean not null default false,
+    whats_app_opt_in boolean not null default false,
+    phone_number_verified_at timestamp with time zone,
     password_hash varchar(255) not null,
     display_name varchar(225) not null,
     status varchar(50) not null,
-    created_at timestamptz not null,
-    last_updated_at timestamptz not null
+    created_at timestamp with time zone not null,
+    last_updated_at timestamp with time zone not null
 );
 
 create table if not exists user_preferences (
@@ -15,26 +19,6 @@ create table if not exists user_preferences (
     allow_call boolean not null default true,
     quiet_hours_start time,
     quiet_hours_end time
-);
-
-create table if not exists contact_invitations (
-    id bigserial primary key,
-    sender_user_id bigint not null,
-    recipient_user_id bigint not null,
-    status varchar(50),
-    created_at timestamptz not null
-);
-
-create table if not exists contact_relationships (
-    id bigserial primary key,
-    owner_user_id bigint not null,
-    contact_user_id bigint not null,
-    nickname varchar(255),
-    favorite boolean not null default false,
-    status varchar(50) not null,
-    created_at timestamptz not null,
-    last_updated_at timestamptz not null,
-    constraint uk_contact_owner_contact unique (owner_user_id, contact_user_id)
 );
 
 create table if not exists availability_rules (

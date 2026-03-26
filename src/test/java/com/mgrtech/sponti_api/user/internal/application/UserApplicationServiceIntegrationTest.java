@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
+import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.user.api.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.UserCredentialsQuery;
@@ -13,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@com.mgrtech.sponti_api.support.ModuleIntegrationTest
+@ModuleIntegrationTest
 class UserApplicationServiceIntegrationTest {
 
     @Autowired

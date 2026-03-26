@@ -1,4 +1,4 @@
-package com.mgrtech.sponti_api.support;
+package com.mgrtech.sponti_api;
 
 import com.mgrtech.sponti_api.TestcontainersConfiguration;
 import com.mgrtech.sponti_api.TestDatabaseCleanerConfiguration;

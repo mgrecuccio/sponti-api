@@ -1,0 +1,219 @@
+Sponti — Contact Flow Documentation
+
+1. Overview
+
+The Contact system in Sponti is designed to support trusted, mutual, and privacy-safe connections between users.
+
+Unlike traditional social networks, Sponti focuses on:
+- existing relationships (not discovery)
+- mutual consent
+- non-intrusive interaction
+- spontaneous reconnection
+
+A contact relationship is therefore not just a connection, but a mutual opt-in channel for potential interaction.
+
+------------------------------------------------------------------------
+
+2. Core Concepts
+
+2.1 Contact Invitation
+
+A Contact Invitation represents a pending request from one user to another.
+
+- It is temporary
+- It exists only before acceptance
+- It does not grant any interaction capability
+
+Lifecycle:
+PENDING -> ACCEPTED / REJECTED / CANCELLED
+
+2.2 Contact Relationship
+
+A Contact Relationship represents an accepted connection between two users.
+
+It is directional and private, meaning:
+- each user owns their own view of the relationship
+- each side can manage their own preferences independently
+
+After acceptance, two relationships are created:
+User A -> User B
+User B -> User A
+
+This enables:
+- custom nicknames
+- favorites
+- independent control such as block or remove
+
+2.3 Relationship Status
+
+Each relationship can be in one of the following states:
+- ACCEPTED: active contact
+- BLOCKED: interaction disabled, invitations prevented
+- REMOVED: contact deleted by the owner
+
+Only ACCEPTED relationships are considered active.
+
+------------------------------------------------------------------------
+
+3. Contact Lifecycle
+
+Step 1 — Sending an Invitation
+
+User A sends an invitation to User B using their email.
+
+Rules:
+- the invited user must already exist in the system
+- a user cannot invite themselves
+- an invitation cannot be sent if:
+  - the users are already connected
+  - a pending invitation already exists
+  - either user has blocked the other
+
+Result:
+- a ContactInvitation is created with status PENDING
+
+Step 2 — Accepting an Invitation
+
+User B accepts the invitation.
+
+System behavior:
+- invitation status becomes ACCEPTED
+- two ContactRelationship entries are created:
+  - A -> B
+  - B -> A
+
+Result:
+- both users now have an independent, private contact entry
+
+Step 3 — Managing the Relationship
+
+Each user can independently manage their contact.
+
+Examples:
+- set nickname
+- mark as favorite
+- block contact
+- remove contact
+
+Changes affect only the owner's relationship row, not the other user's row.
+
+------------------------------------------------------------------------
+
+4. Blocking a Contact
+
+Blocking is unilateral.
+
+When User A blocks User B:
+- A's relationship becomes BLOCKED
+- B's relationship remains unchanged, for example ACCEPTED
+
+Effects:
+- no future invitations are allowed between A and B
+- the pair becomes non-matchable
+- interaction is effectively disabled
+
+Blocking is treated as a strong consent boundary.
+
+------------------------------------------------------------------------
+
+5. Removing a Contact
+
+Removing is also unilateral.
+
+When User A removes User B:
+- A's relationship becomes REMOVED
+- B's relationship remains unchanged
+
+Effects:
+- A no longer sees B as a contact
+- the pair becomes non-matchable
+- no spontaneous interaction will be suggested
+
+Removal represents:
+"I no longer want spontaneous interaction with this person."
+
+------------------------------------------------------------------------
+
+6. Mutual Matching Rule
+
+Sponti enforces mutual opt-in for interaction.
+
+A pair of users is eligible for matching only if:
+- A -> B is ACCEPTED
+- B -> A is ACCEPTED
+
+If either side is BLOCKED or REMOVED, the pair is not eligible for matching.
+
+------------------------------------------------------------------------
+
+7. Privacy and Consent Model
+
+The Contact system is designed around implicit consent:
+- users are not notified when removed
+- users are not notified when blocked
+- the system simply stops proposing interactions
+
+This avoids:
+- social friction
+- awkward situations
+- unnecessary exposure of user decisions
+
+------------------------------------------------------------------------
+
+8. API-Level Behavior for the MVP
+
+Supported operations:
+- GET /contacts
+  returns only ACCEPTED contacts
+
+- GET /contacts/invitations/pending
+  returns the list of pending invitations
+
+- POST /contacts/invitations
+  sends an invitation by email
+
+- POST /contacts/invitations/{id}/accept
+  accepts an invitation
+
+- POST /contacts/{contactUserId}/block
+  blocks a contact
+
+- DELETE /contacts/{contactUserId}
+  removes a contact
+
+------------------------------------------------------------------------
+
+9. Key Design Principles
+
+1. Mutual consent
+Interaction is only possible when both users opt in.
+
+2. Directional ownership
+Each user owns their own contact data.
+
+3. Non-intrusive behavior
+The system avoids exposing sensitive actions like removal or blocking.
+
+4. Simplicity for the MVP
+Only existing users can be invited. There is no external invitation flow yet.
+
+5. Future compatibility
+The model is designed to support:
+- matching engine
+- availability logic
+- free-now presence
+- scoring algorithms
+
+------------------------------------------------------------------------
+
+10. Summary
+
+The Contact system in Sponti is not just a connection graph. It is a consent-aware interaction layer.
+
+It ensures that:
+- users control who they interact with
+- interactions are always mutual
+- the system remains respectful and non-intrusive
+
+This foundation supports the core product vision:
+spontaneous, meaningful reconnections without pressure.

@@ -169,16 +169,17 @@ No local DB setup required.
 
 ---
 
-### Phase 3 — Contacts 🔄
+### Phase 3 — Contacts ✅
 
-* [ ] Contact invitations
-* [ ] Accept / decline flow
-* [ ] Directional relationships
-* [ ] Block / remove logic
+* [x] Contact invitations
+* [x] Accept / decline flow
+* [x] Directional relationships
+* [x] Block / remove logic
+* [x] Contact pending invitations
 
 ---
 
-### Phase 4 — Availability
+### Phase 4 — Availability 🔄
 
 * [ ] Recurring availability rules
 * [ ] Overrides
