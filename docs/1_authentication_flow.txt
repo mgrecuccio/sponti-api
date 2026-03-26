@@ -1,4 +1,4 @@
-Sponti API - Authentication Architecture (Confluence Ready)
+Sponti API - Authentication Architecture
 
 1. Overview
 

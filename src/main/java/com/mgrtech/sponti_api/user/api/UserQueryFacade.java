@@ -5,4 +5,6 @@ import java.util.Optional;
 public interface UserQueryFacade {
 
     Optional<UserProfileView> getProfileById(Long userId);
+
+    Optional<UserLookupView> findByEmailForLookup(String email);
 }

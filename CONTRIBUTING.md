@@ -110,6 +110,21 @@ The project uses:
 
 Make sure tests pass before submitting a PR.
 
+
+To keep tests fast and meaningful, pick the smallest scope that validates your change:
+
+* `@ModuleIntegrationTest`
+    * Use for integration tests that stay inside a single module.
+    * Prefer this by default for module-local behavior.
+
+* `@FullIntegrationTest` (full application context)
+    * Use only for end-to-end wiring, application startup checks, and cross-cutting concerns.
+    * Keep these tests few, because they are the slowest.
+    * Use when a module test needs collaborating modules (shared dependencies).
+    * Example: testing `contact` flows that use `user` APIs.
+
+Rule of thumb: start with module-level tests, then expand scope only when required by the behavior under test.
+
 ---
 
 ## 🧠 Architecture Notes

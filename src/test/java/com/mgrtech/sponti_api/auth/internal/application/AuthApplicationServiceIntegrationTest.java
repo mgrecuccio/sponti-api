@@ -1,7 +1,7 @@
 package com.mgrtech.sponti_api.auth.internal.application;
 
-import com.mgrtech.sponti_api.ModuleWithDependenciesIntegrationTest;
 import com.mgrtech.sponti_api.DatabaseCleaner;
+import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ModuleWithDependenciesIntegrationTest
+@FullIntegrationTest
 class AuthApplicationServiceIntegrationTest {
 
     @Autowired

@@ -17,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
+
 @Service
+@Transactional
 class AuthApplicationService implements AuthFacade {
 
     private static final List<String> DEFAULT_ROLES = List.of("ROLE_USER");
@@ -47,7 +50,6 @@ class AuthApplicationService implements AuthFacade {
     }
 
     @Override
-    @Transactional
     public AuthTokens register(RegisterCommand command) {
         var normalizedEmail = normalizeEmail(command.email());
         var passwordHash = passwordEncoder.encode(command.password());
@@ -76,7 +78,6 @@ class AuthApplicationService implements AuthFacade {
     }
 
     @Override
-    @Transactional
     public AuthTokens login(LoginCommand command) {
         var normalizedEmail = normalizeEmail(command.email());
 
@@ -104,7 +105,6 @@ class AuthApplicationService implements AuthFacade {
     }
 
     @Override
-    @Transactional
     public AuthTokens refresh(String refreshToken) {
         RefreshTokenService.RotateToken rotated = refreshTokenService.rotate(refreshToken);
 
@@ -123,9 +123,5 @@ class AuthApplicationService implements AuthFacade {
                 TOKEN_TYPE,
                 jwtProperties.accessTokenMinutes() * 60
         );
-    }
-
-    private String normalizeEmail(String email) {
-        return email.trim().toLowerCase();
     }
 }
