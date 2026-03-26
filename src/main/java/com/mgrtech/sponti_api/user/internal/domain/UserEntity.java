@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -21,6 +22,18 @@ public class UserEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
+
+    @Column(name = "phone_number_verified", nullable = false)
+    private boolean phoneNumberVerified;
+
+    @Column(name = "whats_app_opt_in", nullable = false)
+    private boolean whatsAppOptIn;
+
+    @Column(name = "phone_number_verified_at")
+    private Instant phoneNumberVerifiedAt;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -33,11 +46,11 @@ public class UserEntity {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "last_updated_at", nullable = false)
-    private OffsetDateTime lastUpdatedAt;
+    private Instant lastUpdatedAt;
 
     public UserEntity(
             String email,

@@ -1,0 +1,1 @@
+package com.mgrtech.sponti_api.shared.configuration;
