@@ -11,6 +11,8 @@ import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 @Transactional
 class AuthApplicationService implements AuthFacade {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthApplicationService.class);
     private static final List<String> DEFAULT_ROLES = List.of("ROLE_USER");
     public static final String TOKEN_TYPE = "Bearer";
 
@@ -51,6 +54,7 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens register(RegisterCommand command) {
+        log.info("Registration requested: email={}", command.email());
         var normalizedEmail = normalizeEmail(command.email());
         var passwordHash = passwordEncoder.encode(command.password());
 
@@ -69,6 +73,8 @@ class AuthApplicationService implements AuthFacade {
         );
         var refreshToken = refreshTokenService.issue(createdUser.id());
 
+        log.info("Access token and refresh token issued for: userId={}", createdUser.id());
+
         return new AuthTokens(
                 accessToken,
                 refreshToken,
@@ -79,12 +85,15 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens login(LoginCommand command) {
+        log.info("Login requested: email={}", command.email());
+
         var normalizedEmail = normalizeEmail(command.email());
 
         var user = userCredentialsQuery.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new BadCredentialsException("Bad Credentials"));
 
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
+            log.warn("Impossible to login. Bad credentials for email={}", command.email());
             throw new BadCredentialsException("Bad credentials");
         }
 
@@ -95,6 +104,7 @@ class AuthApplicationService implements AuthFacade {
         );
 
         String refreshToken = refreshTokenService.issue(user.id());
+        log.info("Login succeeded for email={}", command.email());
 
         return new AuthTokens(
                 accessToken,
@@ -106,6 +116,8 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens refresh(String refreshToken) {
+        log.info("Refresh token requested for refreshToken={}", refreshToken);
+
         RefreshTokenService.RotateToken rotated = refreshTokenService.rotate(refreshToken);
 
         var user = userCredentialsQuery.findById(rotated.userId())
@@ -117,6 +129,7 @@ class AuthApplicationService implements AuthFacade {
                 DEFAULT_ROLES
         );
 
+        log.info("Token refreshed for refreshToken={}", refreshToken);
         return new AuthTokens(
                 accessToken,
                 rotated.rawToken(),

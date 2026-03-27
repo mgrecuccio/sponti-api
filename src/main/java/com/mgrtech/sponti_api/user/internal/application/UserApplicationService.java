@@ -5,6 +5,8 @@ import com.mgrtech.sponti_api.user.api.*;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
 import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,8 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 @Service
 @AllArgsConstructor
 public class UserApplicationService implements UserRegistrationFacade, UserCredentialsQuery, UserQueryFacade {
+
+    private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
 
     private final UserRepository userRepository;
 
@@ -49,9 +53,11 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
     @Override
     @Transactional
     public CreatedUserView createUser(CreateUserCommand command) {
+        log.info("Registering user: email={}", command.email());
         var normalizedEmail = normalizeEmail(command.email());
 
         if(userRepository.existsByEmail(normalizedEmail)) {
+            log.warn("Registration blocked: email={} already exists", command.email());
             throw new EmailAlreadyUsedException("Email already used");
         }
 
@@ -62,6 +68,8 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
         );
 
         var persistedUser = userRepository.save(user);
+        log.info("User registered: userId={}", persistedUser.getId());
+
         return new CreatedUserView(
                 persistedUser.getId(),
                 persistedUser.getEmail(),
