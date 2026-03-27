@@ -11,6 +11,8 @@ import com.mgrtech.sponti_api.contact.internal.repository.ContactRelationshipRep
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserQueryFacade;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 @AllArgsConstructor
 class ContactApplicationService implements ContactFacade {
 
+    private static final Logger log = LoggerFactory.getLogger(ContactApplicationService.class);
+
     private final ContactInvitationRepository contactInvitationRepository;
     private final ContactRelationshipRepository contactRelationshipRepository;
     private final UserQueryFacade userQueryFacade;
@@ -34,24 +38,31 @@ class ContactApplicationService implements ContactFacade {
 
     @Override
     public ContactInvitationView sendInvitation(Long senderUserId, SendContactInvitationCommand command) {
+        log.info("Send contact invitation requested: senderUserId={}", senderUserId);
         var now = Instant.now(clock);
 
         var recipient = userQueryFacade.findByEmailForLookup(normalizeEmail(command.email()))
-                .orElseThrow(() -> new UserNotFoundException(command.email()));
+                .orElseThrow(() -> {
+                    log.warn("Send invitation failed: recipient not found for senderUserId={}", senderUserId);
+                    return new UserNotFoundException(command.email());
+                });
 
         var recipientUserId = recipient.id();
 
         if(senderUserId.equals(recipientUserId)) {
+            log.warn("Send invitation blocked: cannot invite self userId={}", senderUserId);
             throw new CannotInviteSelfException();
         }
 
         if(hasAnyBlockingRelationship(senderUserId, recipientUserId)) {
+            log.warn("Send invitation blocked by relationship: senderUserId={} recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactBlockedException();
         }
 
         if(contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
                 senderUserId, recipientUserId, RelationshipStatus.ACCEPTED
         )) {
+            log.warn("Send invitation blocked: relationship already exists for senderUserId={} and recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactAlreadyExistsException();
         }
 
@@ -63,6 +74,7 @@ class ContactApplicationService implements ContactFacade {
                 );
 
         if (pendingInvitationExists) {
+            log.warn("Send invitation blocked: pending invitation already exists for senderUserId={} and recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactInvitationAlreadyExistsException();
         }
 
@@ -74,6 +86,7 @@ class ContactApplicationService implements ContactFacade {
         );
 
         contactInvitationRepository.save(invitation);
+        log.info("Contact invitation created: invitationId={} senderUserId={} recipientUserId={}", invitation.getId(), senderUserId, recipientUserId);
 
         return new ContactInvitationView(
                 invitation.getId(),
@@ -87,6 +100,7 @@ class ContactApplicationService implements ContactFacade {
 
     @Override
     public void acceptInvitation(Long recipientUserId, Long invitationId) {
+        log.info("Accept contact invitation requested: senderUserId={} , invitationId={}", recipientUserId, invitationId);
         var now = Instant.now(clock);
 
         var invitation = contactInvitationRepository.findByIdAndRecipientUserId(invitationId, recipientUserId)
@@ -96,10 +110,12 @@ class ContactApplicationService implements ContactFacade {
 
         if (contactRelationshipRepository.findByOwnerUserIdAndContactUserId(senderUserId, recipientUserId).isPresent()
                 || contactRelationshipRepository.findByOwnerUserIdAndContactUserId(recipientUserId, senderUserId).isPresent()) {
+            log.warn("Accepting invitation blocked: relationship already exists for senderUserId={} and recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactAlreadyExistsException();
         }
 
         if (hasAnyBlockingRelationship(senderUserId, recipientUserId)) {
+            log.warn("Accepting invitation blocked by relationship: senderUserId={} recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactBlockedException();
         }
 
@@ -121,6 +137,7 @@ class ContactApplicationService implements ContactFacade {
 
         contactRelationshipRepository.save(senderSide);
         contactRelationshipRepository.save(recipientSide);
+        log.info("Invitation accepted and relationships created: senderUserId={} invitationId={}", senderUserId, invitationId);
     }
 
     @Override
@@ -138,12 +155,13 @@ class ContactApplicationService implements ContactFacade {
                 .toList();
     }
 
-
     @Override
     public void blockContact(Long ownerUserId, Long contactUserId) {
+        log.info("Block contact requested: ownerUserId={} , contactUserId={}", ownerUserId, contactUserId);
         var now = Instant.now(clock);
 
         if (ownerUserId.equals(contactUserId)) {
+            log.warn("Users cannot block themselves: ownerUserId={} contactUserId={}", ownerUserId, contactUserId);
             throw new CannotBlockSelfException();
         }
 
@@ -152,13 +170,16 @@ class ContactApplicationService implements ContactFacade {
                 .orElseThrow(ContactNotFoundException::new);
 
         relationship.block(now);
+        log.info("OwnerUserId={} blocked contactUserId={}", ownerUserId, contactUserId);
     }
 
     @Override
     public void removeContact(Long ownerUserId, Long contactUserId) {
+        log.info("Remove contact requested: ownerUserId={} , contactUserId={}", ownerUserId, contactUserId);
         var now = Instant.now(clock);
 
         if (ownerUserId.equals(contactUserId)) {
+            log.warn("Users cannot remove themselves: ownerUserId={} contactUserId={}", ownerUserId, contactUserId);
             throw new CannotRemoveSelfException();
         }
 
@@ -167,6 +188,7 @@ class ContactApplicationService implements ContactFacade {
                 .orElseThrow(ContactNotFoundException::new);
 
         relationship.remove(now);
+        log.info("OwnerUserId={} removed contactUserId={}", ownerUserId, contactUserId);
     }
 
     @Override

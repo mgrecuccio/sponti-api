@@ -29,3 +29,17 @@ app:
       issuer: sponti-api
       access-token-minutes: 15
       refresh-token-days: 30
+
+logging:
+  level:
+    root: INFO
+    com.mgrtech.sponti_api: INFO
+    org.springframework: WARN
+    org.springframework.security: INFO
+    org.hibernate: WARN
+
+  pattern:
+    # Date level pid --- [thread] logger : message
+    # cid = your request correlation id from MDC key "correlationId"
+    # tid/sid = trace/span ids if Micrometer tracing is enabled
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level ${PID:-na} --- [%15.15thread] %-40.40logger{39} : [cid=%X{correlationId:-na} tid=%X{traceId:-na} sid=%X{spanId:-na}] %msg%n"

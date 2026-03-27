@@ -127,6 +127,43 @@ Rule of thumb: start with module-level tests, then expand scope only when requir
 
 ---
 
+## 📒 Logging and Correlation IDs
+
+This project uses a centralized logging pattern configured in `application.yml` so all logs are consistent across modules and environments.
+
+### How the logging pattern works
+
+In `application.yml`, the `logging.level` section defines verbosity by package:
+
+- `root`: global default level (usually `INFO`)
+- `com.mgrtech.sponti_api`: application-specific level
+- framework packages (`org.springframework`, `org.hibernate`, etc.): typically less verbose (`WARN`)
+
+The `logging.pattern.console` controls the format of each log line.  
+Our pattern includes MDC values such as:
+
+- `cid` (`correlationId`): request correlation id
+- `tid` / `sid`: trace and span ids when tracing is enabled
+
+If a value is missing, the pattern uses a fallback (e.g. `na`) so logs remain readable.
+
+### Correlation-id logic lives in `JwtAuthenticationFilter`
+
+Correlation id is added in `JwtAuthenticationFilter` because this filter runs once per incoming HTTP request, very early in the chain.  
+That makes it the best place to:
+
+1. Read `X-Correlation-Id` from the request (or generate one),
+2. Put it in MDC (`correlationId`) so every downstream log line automatically includes it,
+3. Return it in response headers to help clients and backend logs align,
+4. Clear MDC in `finally` to avoid thread-local leakage between requests.
+
+### Service-level logging guidance
+
+Business classes (like `ContactApplicationService`) should **not** regenerate correlation ids.  
+They should just log meaningful domain events (`INFO`), rejected user actions (`WARN`), and diagnostics (`DEBUG`), relying on MDC values already set by the filter.
+
+---
+
 ## 🧠 Architecture Notes
 
 Sponti API is a **Spring Modulith application**.
