@@ -40,6 +40,9 @@ public class UserEntity {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
+    @Column(name = "timezone")
+    private String timezone;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
@@ -64,5 +67,9 @@ public class UserEntity {
 
     public String getStatusAsString() {
         return status.name();
+    }
+
+    public void updateTimezone(String timezone) {
+        this.timezone = timezone;
     }
 }

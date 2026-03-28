@@ -1,9 +1,22 @@
 package com.mgrtech.sponti_api.availability.api;
 
-import com.mgrtech.sponti_api.availability.api.command.MarkFreeNowCommand;
-import com.mgrtech.sponti_api.availability.api.dto.PresenceView;
+import java.time.Instant;
+import java.util.List;
 
 public interface AvailabilityFacade {
 
-    PresenceView markFreeNow(MarkFreeNowCommand command);
+    List<AvailabilityRuleView> getRules(Long userId);
+
+    AvailabilityRuleView createRule(Long userId, CreateAvailabilityRuleCommand command);
+
+    AvailabilityRuleView updateRule(Long userId, Long ruleId, UpdateAvailabilityRuleCommand command);
+
+    void deleteRule(Long userId, Long ruleId);
+
+    List<AvailabilityOverrideView> getOverrides(Long userId);
+
+    AvailabilityOverrideView createOverride(Long userId, CreateAvailabilityOverrideCommand command);
+
+    List<EffectiveAvailabilityView> getEffectiveAvailability(Long userId, Instant from, Instant to);
+
 }

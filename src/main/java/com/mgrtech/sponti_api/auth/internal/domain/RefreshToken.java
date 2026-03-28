@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.auth.internal.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
@@ -12,6 +13,7 @@ import java.time.Instant;
                 @Index(name = "idx_refresh_tokens_token_hash", columnList = "token_hash", unique = true)
         }
 )
+@NoArgsConstructor
 public class RefreshToken {
 
     @Id
@@ -40,8 +42,6 @@ public class RefreshToken {
 
     @Version
     private Long version;
-
-    public RefreshToken() {}
 
     public RefreshToken(Long userId, String tokenHash, Instant createdAt, Instant expiresAt) {
         this.userId = userId;

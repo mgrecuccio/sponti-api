@@ -197,7 +197,7 @@
 					<url>jdbc:postgresql://localhost:5432/sponti</url>
 					<user>sponti</user>
 					<password>sponti</password>
-					<cleanDisabled>true</cleanDisabled>
+					<cleanDisabled>false</cleanDisabled>
 				</configuration>
 			</plugin>
 		</plugins>
