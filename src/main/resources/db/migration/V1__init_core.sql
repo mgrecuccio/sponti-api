@@ -21,22 +21,6 @@ create table if not exists user_preferences (
     quiet_hours_end time
 );
 
-create table if not exists availability_rules (
-    id bigserial primary key,
-    user_id bigint not null,
-    day_of_week varchar(20) not null,
-    start_time time not null,
-    end_time time not null
-);
-
-create table if not exists availability_overrides (
-    id bigserial primary key,
-    user_id bigint not null,
-    starts_at timestamptz not null,
-    ends_at timestamptz not null,
-    available boolean not null
-);
-
 create table if not exists event_publication (
     id UUID primary key,
     event_type varchar(512) not null,
