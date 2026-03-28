@@ -1,0 +1,61 @@
+Sponti — Availability Documentation
+
+1. Overview
+The Availability system in Sponti lets each user define when they are generally open to reconnecting with existing contacts.
+
+It supports recurring weekly rules, one-off overrides, and computed effective availability in a secure, user-specific way.
+
+Recurring weekly availability rules are defined with regular patterns such as “every Monday from 9:00 to 12:00”
+or “Friday evenings for chat”.
+One-off overrides are temporarily changes to the normal schedule, for example by marking a specific
+afternoon as unavailable or making themselves explicitly available for a limited time.
+
+2. Core Concepts
+- Availability Rule: recurring weekly time window that defines the user's normal schedule.
+- Availability Override: temporary exception for a specific period.
+- Effective Availability: final computed availability after rules and overrides are combined.
+
+3. Availability Lifecycle
+Step 1: User defines recurring availability rules by day of week, start time, end time, and channel type.
+Step 2: User adds one-off overrides for exceptional periods, marking temporary availability changes.
+Step 3: System computes effective availability by starting from recurring rules and applying overrides with precedence.
+
+4. Rule and Override Behavior
+- Recurring rules represent the default weekly rhythm.
+- Overrides take precedence over recurring rules for the specified time range.
+- AVAILABLE overrides can add extra availability outside normal rules.
+- UNAVAILABLE overrides can remove time from otherwise available windows.
+
+5. Secure Personal Scope
+Each user can manage and read only their own availability data.
+
+Authentication is required, and all operations are executed against the authenticated user's identifier.
+
+6. Effective Availability Computation
+The system combines recurring rules and temporary overrides into normalized time windows.
+
+This gives other product components a reliable source of truth for when a user is actually available.
+
+7. Timezone Handling
+Availability should be interpreted in the user's own timezone rather than the server's timezone.
+
+Weekly rules such as "Monday at 09:00" only make sense relative to the user's local timezone.
+
+8. Current Scope
+This release provides foundational scheduling only.
+
+It does not yet include contact matching, notifications, real-time infrastructure, or advanced preference features such as quiet hours or contact-specific rules.
+
+9. API (MVP)
+- GET /api/v1/availability/rules
+- POST /api/v1/availability/rules
+- PUT /api/v1/availability/rules/{id}
+- DELETE /api/v1/availability/rules/{id}
+- GET /api/v1/availability/overrides
+- POST /api/v1/availability/overrides
+- GET /api/v1/availability/effective?from={from}&to={to}
+
+10. Summary
+The Availability system gives Sponti a dependable source of truth for when a user is available.
+
+It establishes the scheduling foundation required for future matching, presence, and reconnection features.

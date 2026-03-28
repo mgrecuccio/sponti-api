@@ -35,7 +35,7 @@ class UserControllerTest {
     void returns_profile_for_authenticated_user() throws Exception {
         given(userQueryFacade.getProfileById(42L))
                 .willReturn(Optional.of(new UserProfileView(
-                        42L, "john@example.com", "John", "ACTIVE"
+                        42L, "john@example.com", "John", "ACTIVE", "utc"
                 )));
 
         mockMvc.perform(get("/api/v1/users/me")

@@ -91,7 +91,8 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),
-                user.getStatusAsString()
+                user.getStatusAsString(),
+                user.getTimezone()
         );
     }
 
