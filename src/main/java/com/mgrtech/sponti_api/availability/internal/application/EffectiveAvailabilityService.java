@@ -39,10 +39,9 @@ public class EffectiveAvailabilityService {
         var rules = availabilityRuleRepository.findByUserIdAndEnabledTrue(userId);
         log.debug("UserId={} found {} availability rules from={} to={}", userId, rules.size(), from, to);
 
-
         var overrides = availabilityOverrideRepository
                 .findByUserIdAndStartDateTimeLessThanAndEndDateTimeGreaterThanOrderByStartDateTimeAsc(userId, to, from);
-        log.debug("UserId={} found {} overrides from={} to={}", userId, rules.size(), from, to);
+        log.debug("UserId={} found {} overrides from={} to={}", userId, overrides.size(), from, to);
 
         var baseWindows = buildBaseWindowsFromRules(rules, from, to, zoneId);
 
@@ -51,20 +50,21 @@ public class EffectiveAvailabilityService {
                 .map(it -> clip(new TimeWindow(it.getStartDateTime(), it.getEndDateTime()), from, to))
                 .filter(Objects::nonNull)
                 .toList();
-        log.debug("UserId={} found {} unavailability overrides from={} to={}", userId, rules.size(), from, to);
+        log.debug("UserId={} found {} unavailability overrides from={} to={}", userId, unavailableWindows.size(), from, to);
 
         var availableWindows = overrides.stream()
                 .filter(it -> it.getType() == AvailabilityOverrideType.AVAILABLE)
                 .map(it -> clip(new TimeWindow(it.getStartDateTime(), it.getEndDateTime()), from, to))
                 .filter(Objects::nonNull)
                 .toList();
-        log.debug("UserId={} found {} availability overrides from={} to={}", userId, rules.size(), from, to);
+        log.debug("UserId={} found {} availability overrides from={} to={}", userId, availableWindows.size(), from, to);
 
         var combined = merge(normalize(concat(baseWindows, availableWindows)));
         var effective = subtractWindows(combined, normalize(unavailableWindows));
         effective = merge(normalize(effective));
 
-        log.info("UsedId={} has effective availability={} from={} to={}", userId, effective, from, to);
+        log.info("Computed effective availability: userId={} windowCount={} from={} to={}",
+                userId, effective.size(), from, to);
         return effective;
     }
 
