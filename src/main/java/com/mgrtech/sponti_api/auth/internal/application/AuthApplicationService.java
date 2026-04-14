@@ -54,7 +54,7 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens register(RegisterCommand command) {
-        log.info("Registration requested: email={}", command.email());
+        log.info("Registration requested: email={}", maskEmail(command.email()));
         var normalizedEmail = normalizeEmail(command.email());
         var passwordHash = passwordEncoder.encode(command.password());
 
@@ -73,7 +73,7 @@ class AuthApplicationService implements AuthFacade {
         );
         var refreshToken = refreshTokenService.issue(createdUser.id());
 
-        log.info("Access token and refresh token issued for: userId={}", createdUser.id());
+        log.info("Registration succeeded: userId={}", createdUser.id());
 
         return new AuthTokens(
                 accessToken,
@@ -85,7 +85,7 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens login(LoginCommand command) {
-        log.info("Login requested: email={}", command.email());
+        log.info("Login requested: email={}", maskEmail(command.email()));
 
         var normalizedEmail = normalizeEmail(command.email());
 
@@ -93,7 +93,7 @@ class AuthApplicationService implements AuthFacade {
                 .orElseThrow(() -> new BadCredentialsException("Bad Credentials"));
 
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
-            log.warn("Impossible to login. Bad credentials for email={}", command.email());
+            log.warn("Login rejected: bad credentials for email={}", maskEmail(command.email()));
             throw new BadCredentialsException("Bad credentials");
         }
 
@@ -104,7 +104,7 @@ class AuthApplicationService implements AuthFacade {
         );
 
         String refreshToken = refreshTokenService.issue(user.id());
-        log.info("Login succeeded for email={}", command.email());
+        log.info("Login succeeded: userId={}", user.id());
 
         return new AuthTokens(
                 accessToken,
@@ -116,7 +116,7 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens refresh(String refreshToken) {
-        log.info("Refresh token requested for refreshToken={}", refreshToken);
+        log.info("Refresh token requested");
 
         RefreshTokenService.RotateToken rotated = refreshTokenService.rotate(refreshToken);
 
@@ -129,12 +129,25 @@ class AuthApplicationService implements AuthFacade {
                 DEFAULT_ROLES
         );
 
-        log.info("Token refreshed for refreshToken={}", refreshToken);
+        log.info("Refresh token rotated: userId={}", user.id());
         return new AuthTokens(
                 accessToken,
                 rotated.rawToken(),
                 TOKEN_TYPE,
                 jwtProperties.accessTokenMinutes() * 60
         );
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "na";
+        }
+
+        int atIndex = email.indexOf('@');
+        if (atIndex <= 1) {
+            return "***";
+        }
+
+        return email.charAt(0) + "***" + email.substring(atIndex);
     }
 }
