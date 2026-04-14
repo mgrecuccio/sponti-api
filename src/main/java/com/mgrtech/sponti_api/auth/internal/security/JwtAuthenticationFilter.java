@@ -22,7 +22,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
-    private static final String MDC_KEY = "correlationId";
+    private static final String CORRELATION_ID_MDC_KEY = "correlationId";
+    private static final String USER_ID_MDC_KEY = "userId";
 
     private final JwtTokenService jwtTokenService;
 
@@ -36,18 +37,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        long startedAtNanos = System.nanoTime();
 
         var correlationId = request.getHeader(CORRELATION_ID_HEADER);
         if (correlationId == null || correlationId.isBlank()) {
             correlationId = UUID.randomUUID().toString();
         }
 
-        MDC.put(MDC_KEY, correlationId);
+        MDC.put(CORRELATION_ID_MDC_KEY, correlationId);
         response.setHeader(CORRELATION_ID_HEADER, correlationId);
 
         try {
-            log.info("Incoming request {} {}", request.getMethod(), request.getRequestURI());
-
             var authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
             if (authorization != null && authorization.startsWith("Bearer ")) {
@@ -61,6 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     var authentication = new JwtAuthenticationToken(userId, roles);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    MDC.put(USER_ID_MDC_KEY, String.valueOf(userId));
 
                     log.debug("JWT authentication set for userId={}", userId);
                 }
@@ -68,7 +69,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove(MDC_KEY);
+            long durationMs = (System.nanoTime() - startedAtNanos) / 1_000_000;
+            log.info(
+                    "HTTP request completed: method={} path={} status={} durationMs={}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    response.getStatus(),
+                    durationMs
+            );
+            MDC.remove(USER_ID_MDC_KEY);
+            MDC.remove(CORRELATION_ID_MDC_KEY);
         }
     }
 }
