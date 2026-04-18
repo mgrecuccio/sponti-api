@@ -44,7 +44,9 @@ class ContactApplicationService implements ContactFacade {
         var recipient = userQueryFacade.findByEmailForLookup(normalizeEmail(command.email()))
                 .orElseThrow(() -> {
                     log.warn("Send invitation failed: recipient not found for senderUserId={}", senderUserId);
-                    return new UserNotFoundException(command.email());
+                    return new UserNotFoundException(
+                            "No account exists for that email address yet. You can invite only existing users."
+                    );
                 });
 
         var recipientUserId = recipient.id();
