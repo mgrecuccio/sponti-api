@@ -135,6 +135,40 @@ class ContactControllerTest {
     }
 
     @Test
+    void edit_contact_and_returns_contact_view() throws Exception {
+        var request = new ContactController.UpdateContactRequest(
+                "teamMate"
+        );
+
+        given(contactFacade.editContact(42L, 33L, new EditContactCommand(request.nickName())))
+                .willReturn(new ContactView(
+                        33L,
+                        request.nickName(),
+                        Boolean.FALSE,
+                        Instant.now()
+                ));
+
+        mockMvc.perform(put("/api/v1/contacts/{contactUserId}", 33L)
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(jsonPath("$.contactUserId").value(33L))
+                .andExpect(jsonPath("$.nickName").value(request.nickName()))
+                .andExpect(jsonPath("$.favorite").value(Boolean.FALSE));
+    }
+
+    @Test
+    void edit_contact_returns_400_if_request_not_valid() throws Exception {
+        var request = new ContactController.UpdateContactRequest(null);
+
+        mockMvc.perform((put("/api/v1/contacts/{contactUserId}", 22L))
+                .principal(new TestingAuthenticationToken("42", null))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void returns_no_content_if_no_contact_list_is_found_for_authenticated_users() throws Exception {
         given(contactFacade.getAcceptedContacts(42L))
                 .willReturn(Collections.emptyList());

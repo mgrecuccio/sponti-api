@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.contact.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.contact.api.ContactFacade;
+import com.mgrtech.sponti_api.contact.api.EditContactCommand;
 import com.mgrtech.sponti_api.contact.api.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.exception.*;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
@@ -185,6 +186,31 @@ class ContactApplicationServiceIntegrationTest {
 
         assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
         assertThat(contactFacade.getAcceptedContacts(recipient.id())).hasSize(1);
+    }
+
+    @Test
+    void edit_contact_changes_nick_name() {
+        var userA = userRegistrationFacade.createUser(new CreateUserCommand("a@example.com", "hash", "A"));
+        var userB = userRegistrationFacade.createUser(new CreateUserCommand("b@example.com", "hash", "B"));
+
+        var invitation = contactFacade.sendInvitation(
+                userA.id(),
+                new SendContactInvitationCommand(userB.email(), "B")
+        );
+
+        contactFacade.acceptInvitation(userB.id(), invitation.id());
+
+        assertThat(contactFacade.getAcceptedContacts(userA.id())).isNotEmpty().hasSize(1);
+        var nickNameUsedByA = contactFacade.getAcceptedContacts(userA.id()).getFirst().nickName();
+        assertThat(nickNameUsedByA).isEqualTo("B");
+
+        assertThat(contactFacade.getAcceptedContacts(userB.id())).isNotEmpty().hasSize(1);
+        var nickNameUsedByB = contactFacade.getAcceptedContacts(userB.id()).getFirst().nickName();
+        assertThat(nickNameUsedByB).isNull();
+
+        contactFacade.editContact(userB.id(), userA.id(), new EditContactCommand("A"));
+        nickNameUsedByB = contactFacade.getAcceptedContacts(userB.id()).getFirst().nickName();
+        assertThat(nickNameUsedByB).isEqualTo("A");
     }
 
     @Test

@@ -193,6 +193,38 @@ class ContactApplicationService implements ContactFacade {
         log.info("OwnerUserId={} removed contactUserId={}", ownerUserId, contactUserId);
     }
 
+    public ContactView editContact(Long ownerUserId, Long contactUserId, EditContactCommand command) {
+        log.info("Edit contact requested: ownerUserId={} , contactUserId={}", ownerUserId, contactUserId);
+
+        if (ownerUserId.equals(contactUserId)) {
+            log.warn("Users cannot edit themselves: ownerUserId={} contactUserId={}", ownerUserId, contactUserId);
+            throw new CannotRemoveSelfException();
+        }
+
+        if(!contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
+                ownerUserId, contactUserId, RelationshipStatus.ACCEPTED
+        )) {
+            log.warn("No ACCEPTED relationship found for ownerUserId={} and contactUserId={}", ownerUserId, contactUserId);
+            throw new ContactNotFoundException();
+        }
+
+        var relationship = contactRelationshipRepository
+                .findByOwnerUserIdAndContactUserId(ownerUserId, contactUserId)
+                .orElseThrow(ContactNotFoundException::new);
+
+        var newNickName= command.nickName();
+
+        relationship.edit(newNickName);
+        log.info("OwnerUserId={} edited contactUserId={}: new nickName={}", ownerUserId, contactUserId, newNickName);
+
+        return new ContactView(
+                relationship.getContactUserId(),
+                relationship.getNickname(),
+                relationship.isFavorite(),
+                relationship.getCreatedAt()
+        );
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<PendingContactInvitationView> getPendingIncomingInvitations(Long recipientUserId) {
