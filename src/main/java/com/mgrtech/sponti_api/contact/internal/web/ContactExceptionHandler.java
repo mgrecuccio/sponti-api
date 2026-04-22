@@ -17,7 +17,8 @@ public class ContactExceptionHandler {
     @ExceptionHandler({
             CannotInviteSelfException.class,
             CannotBlockSelfException.class,
-            CannotRemoveSelfException.class
+            CannotRemoveSelfException.class,
+            CannotEditSelfContactException.class
     })
     ProblemDetail handleCannotInviteSelf(Exception ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",

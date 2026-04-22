@@ -1,5 +1,8 @@
 package com.mgrtech.sponti_api.contact.api;
 
+import com.mgrtech.sponti_api.contact.internal.web.ContactController;
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 public interface ContactFacade {
@@ -16,4 +19,5 @@ public interface ContactFacade {
 
     List<PendingContactInvitationView> getPendingIncomingInvitations(Long recipientUserId);
 
+    ContactView editContact(Long ownerUserId, Long contactUserId, EditContactCommand request);
 }
