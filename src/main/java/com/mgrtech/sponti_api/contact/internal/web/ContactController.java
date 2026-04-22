@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -77,6 +78,16 @@ public class ContactController {
         contactFacade.removeContact(ownerUserId, contactUserId);
     }
 
+    @PutMapping("/{contactUserId}")
+    public ContactView editContact(
+            Authentication authentication,
+            @PathVariable Long contactUserId,
+            @Valid @RequestBody UpdateContactRequest request
+    ) {
+        var ownerUserId = extractUserId(authentication);
+        return contactFacade.editContact(ownerUserId, contactUserId, new EditContactCommand(request.nickName()));
+    }
+
     @GetMapping("/invitations/pending")
     public List<PendingContactInvitationView> getPendingInvitations(Authentication authentication) {
         var recipientUserId = extractUserId(authentication);
@@ -101,6 +112,14 @@ public class ContactController {
             String email,
 
             @Schema(example = "nickName")
+            @Size(max = 100)
+            String nickName
+    ) {}
+
+    @Schema(description = "Update Contact request payload")
+    record UpdateContactRequest(
+            @Schema(example = "nickName")
+            @NotNull
             @Size(max = 100)
             String nickName
     ) {}

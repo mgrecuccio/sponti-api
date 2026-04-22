@@ -97,6 +97,10 @@ public class ContactRelationshipEntity {
         this.updatedAt = now;
     }
 
+    public void edit(String nickname) {
+        this.nickname = nickname;
+    }
+
     public boolean isAccepted() {
         return RelationshipStatus.ACCEPTED.equals(this.relationshipStatus);
     }
