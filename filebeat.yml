@@ -1,0 +1,66 @@
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_docker_metadata: ~
+
+  - drop_event:
+      when:
+        not:
+          equals:
+            container.labels.com_docker_compose_service: "sponti-api"
+
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      add_error_key: true
+
+  - if:
+      contains:
+        message: "HTTP request completed:"
+    then:
+      - dissect:
+          tokenizer: "HTTP request completed: method=%{http.request.method} path=%{url.path} status=%{http.response.status_code|integer} durationMs=%{sponti.duration_ms|integer}"
+          field: message
+          target_prefix: ""
+          ignore_failure: true
+
+      - script:
+          lang: javascript
+          id: extract_sponti_domain_from_path
+          source: >
+            function process(event) {
+              var path = event.Get("url.path");
+              if (!path) return;
+
+              var m = path.match(/^\/api\/v\d+\/([^\/\?]+)/);
+              if (m && m[1]) {
+                event.Put("sponti.domain", m[1]);
+              } else {
+                event.Put("sponti.domain", "unknown");
+              }
+            }
+
+  - add_fields:
+      target: service
+      fields:
+        name: sponti-api
+
+  - add_fields:
+      target: environment
+      fields:
+        name: dev
+
+setup.kibana:
+  host: "kibana:5601"
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "sponti-api-logs-dev"
+
+setup.template.name: "sponti-api-logs-dev"
+setup.template.pattern: "sponti-api-logs-dev"
+setup.ilm.enabled: false

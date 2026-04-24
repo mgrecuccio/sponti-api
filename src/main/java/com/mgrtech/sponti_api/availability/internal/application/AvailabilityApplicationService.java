@@ -80,9 +80,13 @@ public class AvailabilityApplicationService implements AvailabilityFacade {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AvailabilityOverrideView> getOverrides(Long userId) {
-        log.info("Availability overrides requested: userId={}", userId);
-        return availabilityOverrideRepository.findByUserIdOrderByStartDateTimeAsc(userId)
+    public List<AvailabilityOverrideView> getOverrides(Long userId, Instant endsAfter) {
+        log.info("Availability overrides requested: userId={} endsAfter={}", userId, endsAfter);
+        var overrides = endsAfter == null
+                ? availabilityOverrideRepository.findByUserIdOrderByStartDateTimeAsc(userId)
+                : availabilityOverrideRepository.findByUserIdAndEndDateTimeGreaterThanOrderByStartDateTimeAsc(userId, endsAfter);
+
+        return overrides
                 .stream()
                 .map(this::toView)
                 .toList();

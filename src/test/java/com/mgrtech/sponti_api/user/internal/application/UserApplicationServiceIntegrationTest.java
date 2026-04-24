@@ -37,7 +37,12 @@ class UserApplicationServiceIntegrationTest {
     @Test
     void create_user_persists_and_returns_view() {
         var result = userRegistrationFacade.createUser(
-                new CreateUserCommand("test@email.com", "password-hash", "nickname")
+                new CreateUserCommand(
+                        "test@email.com",
+                        "password-hash",
+                        "nickname",
+                        "UTC"
+                )
         );
 
         assertThat(result.email()).isEqualTo("test@email.com");
@@ -46,23 +51,34 @@ class UserApplicationServiceIntegrationTest {
         assertThat(profile).isPresent();
         assertThat(profile.get().email()).isEqualTo("test@email.com");
         assertThat(profile.get().displayName()).isEqualTo("nickname");
+        assertThat(profile.get().timezone()).isEqualTo("UTC");
     }
 
     @Test
     void create_user_rejects_duplicate_email_after_normalization() {
         userRegistrationFacade.createUser(
-                new CreateUserCommand("john@example.com", "hash1", "John")
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash1",
+                        "John",
+                        "UTC"
+                )
         );
 
         assertThatThrownBy(() -> userRegistrationFacade.createUser(
-                new CreateUserCommand(" John@Example.com ", "hash2", "Johnny")
+                new CreateUserCommand(" John@Example.com ", "hash2", "Johnny", "UTC")
         )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test
     void find_by_email_normalizes_input() {
         var created = userRegistrationFacade.createUser(
-                new CreateUserCommand("john@example.com", "hash", "John")
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
         );
 
         var result = userCredentialsQuery.findByEmail("  JOHN@EXAMPLE.COM ");

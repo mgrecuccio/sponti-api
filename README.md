@@ -82,6 +82,9 @@ This will start:
 
 * PostgreSQL
 * Redis
+* Elasticsearch
+* Kibana
+* Filebeat
 
 ### 3. Run the application
 
@@ -98,6 +101,99 @@ Swagger UI available at:
 ```
 http://localhost:8080/swagger-ui.html
 ```
+
+---
+
+## 📊 Logging with ELK
+
+The local Docker setup includes a minimal ELK stack for log exploration:
+
+* `elasticsearch`: stores indexed log documents
+* `kibana`: UI for searching and filtering logs
+* `filebeat`: reads Docker container logs and ships them to Elasticsearch
+
+### `compose.yml`
+
+`compose.yml` starts the following observability services:
+
+* `elasticsearch` on `http://localhost:9200`
+* `kibana` on `http://localhost:5601`
+* `filebeat`, configured from the repo-level [`filebeat.yml`](filebeat.yml)
+
+The `filebeat` container mounts:
+
+* `./filebeat.yml` as its runtime configuration
+* `/var/lib/docker/containers` to read Docker JSON log files
+* `/var/run/docker.sock` to enrich events with Docker metadata
+
+### `filebeat.yml`
+
+The Filebeat configuration is intentionally focused on the `sponti-api` container.
+
+Current processing flow:
+
+* read Docker container logs from `/var/lib/docker/containers/*/*.log`
+* enrich each event with Docker metadata via `add_docker_metadata`
+* drop events that do not belong to the `sponti-api` Docker Compose service
+* try to decode JSON content from the `message` field when applicable
+* parse request completion logs of the form:
+
+```text
+HTTP request completed: method=GET path=/api/v1/auth/login status=200 durationMs=12
+```
+
+* extract:
+  * `http.request.method`
+  * `url.path`
+  * `http.response.status_code`
+  * `sponti.duration_ms`
+  * `sponti.domain`
+* add static metadata:
+  * `service.name = sponti-api`
+  * `environment.name = dev`
+
+`sponti.domain` is derived from the first path segment after `/api/v1/`.
+
+Examples:
+
+* `/api/v1/auth/login` -> `sponti.domain = auth`
+* `/api/v1/users/me` -> `sponti.domain = users`
+* `/api/v1/contacts` -> `sponti.domain = contacts`
+* `/api/v1/availability/rules` -> `sponti.domain = availability`
+
+### Kibana usage
+
+Open Kibana at:
+
+```text
+http://localhost:5601
+```
+
+Recommended setup:
+
+* create or open the data view for `sponti-api-logs-dev`
+* refresh the field list after Filebeat configuration changes
+* use Discover to keep only relevant columns such as `@timestamp`, `message`, `service.name`, and `sponti.domain`
+
+Useful filters:
+
+```text
+service.name : "sponti-api"
+```
+
+```text
+sponti.domain : "auth"
+```
+
+```text
+sponti.domain : ("auth" or "users" or "contacts" or "availability")
+```
+
+Important notes:
+
+* field changes in `filebeat.yml` apply only to newly ingested logs
+* `sponti.domain` is currently extracted from HTTP request completion log lines
+* if you want domain filtering on every application log line, the application should also emit that value directly in structured logs or MDC
 
 ---
 
@@ -179,12 +275,12 @@ No local DB setup required.
 
 ---
 
-### Phase 4 — Availability 🔄
+### Phase 4 — Availability ✅
 
-* [ ] Recurring availability rules
-* [ ] Overrides
-* [ ] Quiet hours
-* [ ] Redis "Free Now"
+* [x] Recurring availability rules
+* [x] Overrides
+* [x] Quiet hours
+* [x] Redis "Free Now"
 
 ---
 
