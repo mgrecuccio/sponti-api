@@ -79,13 +79,17 @@ public class EffectiveAvailabilityService {
                 .map(UserProfileView::timezone)
                 .filter(value -> !value.isBlank())
                 .map(this::safeZoneId)
-                .orElse(DEFAULT_ZONE_ID);
+                .orElseGet(() -> {
+                    log.warn("No timezone found for userId={}, falling back to UTC", userId);
+                    return DEFAULT_ZONE_ID;
+                });
     }
 
     private ZoneId safeZoneId(String timezone) {
         try {
             return ZoneId.of(timezone);
         } catch (Exception ex) {
+            log.warn("Invalid timezone={}, falling back to UTC", timezone);
             return DEFAULT_ZONE_ID;
         }
     }

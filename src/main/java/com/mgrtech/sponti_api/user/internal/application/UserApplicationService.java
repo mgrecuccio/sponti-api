@@ -64,7 +64,8 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
         var user = new UserEntity(
                 normalizedEmail,
                 command.passwordHash(),
-                command.displayName()
+                command.displayName(),
+                command.timezone()
         );
 
         var persistedUser = userRepository.save(user);

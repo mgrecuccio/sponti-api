@@ -31,7 +31,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void register_creates_user_and_returns_auth_tokens() {
         var result = authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         assertThat(result).isNotNull();
@@ -44,18 +44,18 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void register_rejects_duplicate_email_after_normalization() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         assertThatThrownBy(() -> authFacade.register(
-                new RegisterCommand("  John@Example.com  ", "password2", "Johnny")
+                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "UTC")
         )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test
     void login_returns_auth_tokens_for_valid_credentials() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         var result = authFacade.login(
@@ -72,7 +72,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void login_normalizes_email() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         var result = authFacade.login(
@@ -94,7 +94,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void login_throws_bad_credentials_when_password_is_wrong() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         assertThatThrownBy(() -> authFacade.login(
@@ -105,7 +105,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void refresh_rotates_refresh_token_and_returns_new_access_token() {
         var registered = authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John")
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
         );
 
         var refreshed = authFacade.refresh(registered.refreshToken());

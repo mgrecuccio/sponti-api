@@ -62,7 +62,8 @@ class AuthApplicationService implements AuthFacade {
                 new CreateUserCommand(
                         normalizedEmail,
                         passwordHash,
-                        command.displayName()
+                        command.displayName(),
+                        command.timezone()
                 )
         );
 

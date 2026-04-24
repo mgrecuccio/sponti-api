@@ -30,7 +30,14 @@ class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a new user")
     AuthTokens register(@Valid @RequestBody RegisterRequest request) {
-        return authFacade.register(new RegisterCommand(request.email(), request.password(), request.displayName()));
+        return authFacade.register(
+                new RegisterCommand(
+                        request.email(),
+                        request.password(),
+                        request.displayName(),
+                        request.timezone()
+                )
+        );
     }
 
     @PostMapping("/login")
@@ -51,7 +58,8 @@ class AuthController {
     record RegisterRequest(
             @Schema(example = "user@example.com") @NotBlank @Email String email,
             @Schema(example = "strongPassword") @NotBlank String password,
-            @Schema(example = "nickname") @NotBlank String displayName
+            @Schema(example = "nickname") @NotBlank String displayName,
+            @Schema(example = "Europe/Brussels")String timezone
     ) {
     }
 
