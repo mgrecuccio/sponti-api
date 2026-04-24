@@ -86,9 +86,12 @@ class AvailabilityController {
     }
 
     @GetMapping("/overrides")
-    public List<AvailabilityOverrideView> getOverrides(Authentication authentication) {
+    public List<AvailabilityOverrideView> getOverrides(
+            Authentication authentication,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endsAfter
+    ) {
         var userId = extractUserId(authentication);
-        return availabilityFacade.getOverrides(userId);
+        return availabilityFacade.getOverrides(userId, endsAfter);
     }
 
     @PostMapping("/overrides")

@@ -35,8 +35,20 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void send_and_accept_invitation_creates_bidirectional_accepted_contacts() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC")
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC")
+        );
 
         var invitation = contactFacade.sendInvitation(
                 sender.id(),
@@ -66,7 +78,14 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void send_invitation_throws_when_recipient_user_does_not_exist() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
 
         assertThatThrownBy(() -> contactFacade.sendInvitation(
                 sender.id(),
@@ -76,7 +95,14 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void send_invitation_throws_exception_when_sender_invites_self() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
 
         assertThatThrownBy(() -> contactFacade.sendInvitation(
                 sender.id(),
@@ -86,7 +112,14 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void block_contact_throws_exception_when_sender_blocks_self() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
 
         assertThatThrownBy(() -> contactFacade.blockContact(
                 sender.id(),
@@ -96,7 +129,14 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void remove_contact_throws_exception_when_sender_removes_self() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
 
         assertThatThrownBy(() -> contactFacade.removeContact(
                 sender.id(),
@@ -106,8 +146,22 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void send_invitation_rejects_duplicate_pending_invitation() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
 
         contactFacade.sendInvitation(
                 sender.id(),
@@ -122,8 +176,22 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void send_invitation_throws_when_contact_is_already_accepted() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
 
         var invitation = contactFacade.sendInvitation(
                 sender.id(),
@@ -139,9 +207,30 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void accept_invitation_throws_when_invitation_does_not_belong_to_recipient() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
-        var stranger = userRegistrationFacade.createUser(new CreateUserCommand("stranger@example.com", "hash", "Stranger"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+        var stranger = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "stranger@example.com",
+                        "hash",
+                        "Stranger",
+                        "UTC"
+                )
+        );
 
         var invitation = contactFacade.sendInvitation(
                 sender.id(),
@@ -154,8 +243,22 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void accept_invitation_throws_when_relationship_is_blocked() {
-        var userA = userRegistrationFacade.createUser(new CreateUserCommand("a@example.com", "hash", "A"));
-        var userB = userRegistrationFacade.createUser(new CreateUserCommand("b@example.com", "hash", "B"));
+        var userA = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "a@example.com",
+                        "hash",
+                        "A",
+                        "UTC"
+                )
+        );
+        var userB = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "b@example.com",
+                        "hash",
+                        "B",
+                        "UTC"
+                )
+        );
 
         var firstInvitation = contactFacade.sendInvitation(
                 userA.id(),
@@ -173,8 +276,22 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void remove_contact_hides_it_from_accepted_contacts() {
-        var sender = userRegistrationFacade.createUser(new CreateUserCommand("sender@example.com", "hash", "Sender"));
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
 
         var invitation = contactFacade.sendInvitation(
                 sender.id(),
@@ -190,8 +307,22 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void edit_contact_changes_nick_name() {
-        var userA = userRegistrationFacade.createUser(new CreateUserCommand("a@example.com", "hash", "A"));
-        var userB = userRegistrationFacade.createUser(new CreateUserCommand("b@example.com", "hash", "B"));
+        var userA = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "a@example.com",
+                        "hash",
+                        "A",
+                        "UTC"
+                )
+        );
+        var userB = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "b@example.com",
+                        "hash",
+                        "B",
+                        "UTC"
+                )
+        );
 
         var invitation = contactFacade.sendInvitation(
                 userA.id(),
@@ -215,10 +346,38 @@ class ContactApplicationServiceIntegrationTest {
 
     @Test
     void get_pending_incoming_invitations_returns_only_pending_for_recipient_in_desc_order() {
-        var recipient = userRegistrationFacade.createUser(new CreateUserCommand("recipient@example.com", "hash", "Recipient"));
-        var senderOne = userRegistrationFacade.createUser(new CreateUserCommand("sender-one@example.com", "hash", "Sender One"));
-        var senderTwo = userRegistrationFacade.createUser(new CreateUserCommand("sender-two@example.com", "hash", "Sender Two"));
-        var otherRecipient = userRegistrationFacade.createUser(new CreateUserCommand("other@example.com", "hash", "Other"));
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+        var senderOne = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender-one@example.com",
+                        "hash",
+                        "Sender One",
+                        "UTC"
+                )
+        );
+        var senderTwo = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender-two@example.com",
+                        "hash",
+                        "Sender Two",
+                        "UTC"
+                )
+        );
+        var otherRecipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "other@example.com",
+                        "hash",
+                        "Other",
+                        "UTC"
+                )
+        );
 
         var acceptedInvitation = contactFacade.sendInvitation(
                 senderOne.id(),

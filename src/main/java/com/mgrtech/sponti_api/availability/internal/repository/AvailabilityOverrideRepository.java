@@ -10,6 +10,8 @@ public interface AvailabilityOverrideRepository extends JpaRepository<Availabili
 
     List<AvailabilityOverrideEntity> findByUserIdOrderByStartDateTimeAsc(Long userId);
 
+    List<AvailabilityOverrideEntity> findByUserIdAndEndDateTimeGreaterThanOrderByStartDateTimeAsc(Long userId, Instant endsAfter);
+
     /*
       It retrieves all overrides for a user that overlap with a given time range, ordered by start time.
         SELECT *

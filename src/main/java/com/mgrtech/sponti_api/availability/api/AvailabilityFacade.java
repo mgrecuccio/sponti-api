@@ -13,7 +13,7 @@ public interface AvailabilityFacade {
 
     void deleteRule(Long userId, Long ruleId);
 
-    List<AvailabilityOverrideView> getOverrides(Long userId);
+    List<AvailabilityOverrideView> getOverrides(Long userId, Instant endsAfter);
 
     AvailabilityOverrideView createOverride(Long userId, CreateAvailabilityOverrideCommand command);
 

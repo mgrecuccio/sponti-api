@@ -7,7 +7,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "users")
@@ -58,11 +57,13 @@ public class UserEntity {
     public UserEntity(
             String email,
             String passwordHash,
-            String displayName
+            String displayName,
+            String timezone
     ) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.displayName = displayName;
+        this.timezone = timezone;
     }
 
     public String getStatusAsString() {

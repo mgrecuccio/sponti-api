@@ -40,10 +40,17 @@ class AuthControllerTest {
         var request = new AuthController.RegisterRequest(
                 "john@example.com",
                 "password",
-                "nickname"
+                "nickname",
+                "UTC"
         );
 
-        given(authFacade.register(new RegisterCommand(request.email(), request.password(), request.displayName())))
+        given(authFacade.register(
+                new RegisterCommand(
+                        request.email(),
+                        request.password(),
+                        request.displayName(),
+                        request.timezone()
+                )))
                 .willReturn(new AuthTokens(
                         "access-token",
                         "refresh-token",
@@ -63,10 +70,17 @@ class AuthControllerTest {
         var request = new AuthController.RegisterRequest(
                 "invalid-email",
                 "password",
-                "nickname"
+                "nickname",
+                "UTC"
         );
 
-        given(authFacade.register(new RegisterCommand(request.email(), request.password(), request.displayName())))
+        given(authFacade.register(
+                new RegisterCommand(
+                        request.email(),
+                        request.password(),
+                        request.displayName(),
+                        request.timezone()
+                )))
                 .willReturn(new AuthTokens(
                         "access-token",
                         "refresh-token",
