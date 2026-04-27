@@ -97,8 +97,9 @@ public class ContactRelationshipEntity {
         this.updatedAt = now;
     }
 
-    public void edit(String nickname) {
+    public void edit(String nickname, boolean favorite) {
         this.nickname = nickname;
+        this.favorite = favorite;
     }
 
     public boolean isAccepted() {
