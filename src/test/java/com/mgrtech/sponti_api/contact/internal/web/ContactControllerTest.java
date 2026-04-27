@@ -137,14 +137,19 @@ class ContactControllerTest {
     @Test
     void edit_contact_and_returns_contact_view() throws Exception {
         var request = new ContactController.UpdateContactRequest(
-                "teamMate"
+                "teamMate",
+                true
         );
 
-        given(contactFacade.editContact(42L, 33L, new EditContactCommand(request.nickName())))
+        given(contactFacade.editContact(
+                42L,
+                33L,
+                new EditContactCommand(request.nickName(), request.favorite()))
+        )
                 .willReturn(new ContactView(
                         33L,
                         request.nickName(),
-                        Boolean.FALSE,
+                        Boolean.TRUE,
                         Instant.now()
                 ));
 
@@ -154,12 +159,12 @@ class ContactControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(jsonPath("$.contactUserId").value(33L))
                 .andExpect(jsonPath("$.nickName").value(request.nickName()))
-                .andExpect(jsonPath("$.favorite").value(Boolean.FALSE));
+                .andExpect(jsonPath("$.favorite").value(Boolean.TRUE));
     }
 
     @Test
     void edit_contact_returns_400_if_request_not_valid() throws Exception {
-        var request = new ContactController.UpdateContactRequest(null);
+        var request = new ContactController.UpdateContactRequest(null, false);
 
         mockMvc.perform((put("/api/v1/contacts/{contactUserId}", 22L))
                 .principal(new TestingAuthenticationToken("42", null))
