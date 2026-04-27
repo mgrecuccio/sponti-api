@@ -85,7 +85,11 @@ public class ContactController {
             @Valid @RequestBody UpdateContactRequest request
     ) {
         var ownerUserId = extractUserId(authentication);
-        return contactFacade.editContact(ownerUserId, contactUserId, new EditContactCommand(request.nickName()));
+        return contactFacade.editContact(
+                ownerUserId,
+                contactUserId,
+                new EditContactCommand(request.nickName(), request.favorite)
+        );
     }
 
     @GetMapping("/invitations/pending")
@@ -121,6 +125,9 @@ public class ContactController {
             @Schema(example = "nickName")
             @NotNull
             @Size(max = 100)
-            String nickName
+            String nickName,
+
+            @Schema(example = "true")
+            boolean favorite
     ) {}
 }

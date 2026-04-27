@@ -306,7 +306,7 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
-    void edit_contact_changes_nick_name() {
+    void edit_contact_changes_nick_name_and_favorite_flag() {
         var userA = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "a@example.com",
@@ -331,17 +331,30 @@ class ContactApplicationServiceIntegrationTest {
 
         contactFacade.acceptInvitation(userB.id(), invitation.id());
 
-        assertThat(contactFacade.getAcceptedContacts(userA.id())).isNotEmpty().hasSize(1);
+        var aContacts = contactFacade.getAcceptedContacts(userA.id());
+        assertThat(aContacts).isNotEmpty().hasSize(1);
+
+        // by default, contacts aren't favorite
+        assertThat((aContacts.getFirst().favorite())).isFalse();
+
         var nickNameUsedByA = contactFacade.getAcceptedContacts(userA.id()).getFirst().nickName();
         assertThat(nickNameUsedByA).isEqualTo("B");
 
-        assertThat(contactFacade.getAcceptedContacts(userB.id())).isNotEmpty().hasSize(1);
+        var bContacts = contactFacade.getAcceptedContacts(userB.id());
+        assertThat(bContacts).isNotEmpty().hasSize(1);
+
+        // by default, contacts aren't favorite
+        assertThat((bContacts.getFirst().favorite())).isFalse();
+
         var nickNameUsedByB = contactFacade.getAcceptedContacts(userB.id()).getFirst().nickName();
         assertThat(nickNameUsedByB).isNull();
 
-        contactFacade.editContact(userB.id(), userA.id(), new EditContactCommand("A"));
-        nickNameUsedByB = contactFacade.getAcceptedContacts(userB.id()).getFirst().nickName();
+        contactFacade.editContact(userB.id(), userA.id(), new EditContactCommand("A", true));
+
+        bContacts = contactFacade.getAcceptedContacts(userB.id());
+        nickNameUsedByB = bContacts.getFirst().nickName();
         assertThat(nickNameUsedByB).isEqualTo("A");
+        assertThat((bContacts.getFirst().favorite())).isTrue();
     }
 
     @Test

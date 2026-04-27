@@ -212,10 +212,16 @@ class ContactApplicationService implements ContactFacade {
                 .findByOwnerUserIdAndContactUserId(ownerUserId, contactUserId)
                 .orElseThrow(ContactNotFoundException::new);
 
-        var newNickName= command.nickName();
+        var newNickName = command.nickName();
+        var favorite = command.favorite();
 
-        relationship.edit(newNickName);
-        log.info("OwnerUserId={} edited contactUserId={}: new nickName={}", ownerUserId, contactUserId, newNickName);
+        relationship.edit(newNickName, favorite);
+        log.info("OwnerUserId={} edited contactUserId={}: new nickName={}, favorite={}",
+                ownerUserId,
+                contactUserId,
+                newNickName,
+                favorite
+        );
 
         return new ContactView(
                 relationship.getContactUserId(),
