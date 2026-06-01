@@ -1,0 +1,314 @@
+Sponti — Notification Module Documentation
+
+1. Overview
+
+The Notification Module owns notification delivery for Sponti.
+
+Its role is not to decide matching business rules. Its role is to receive domain/application events, map them to notification types, format notification messages, apply cooldown/deduplication rules, and send notifications.
+
+Current implementation uses placeholder logging for delivery, but the architecture is ready for real push delivery later through FCM, APNs, or another provider.
+
+------------------------------------------------------------------------
+
+2. Responsibilities
+
+The notification module is responsible for:
+- receiving application/domain events from other modules
+- mapping events to notification types
+- creating notification commands
+- formatting notification title and body
+- adding routing data for the mobile app
+- applying cooldown rules
+- suppressing repeated generic notifications
+- recording notification history
+- sending placeholder notifications for now
+
+The notification module is not responsible for:
+- computing match suggestions
+- validating matching rules
+- creating match proposals
+- deciding availability overlaps
+- owning contact or availability business logic
+
+------------------------------------------------------------------------
+
+3. Notification Types
+
+Current notification types:
+- MATCH_PROPOSAL_CREATED
+- MATCH_SUGGESTIONS_AVAILABLE
+
+3.1 MATCH_PROPOSAL_CREATED
+
+Business meaning:
+"Someone explicitly invited you to connect."
+
+Triggered by:
+- MatchProposalCreatedEvent
+
+Target user:
+- candidateUserId
+
+Suggested mobile behavior:
+- open or refresh incoming invitations
+- call GET /api/v1/matches/incoming
+
+This notification is concrete and should normally be sent once per stored proposal.
+
+3.2 MATCH_SUGGESTIONS_AVAILABLE
+
+Business meaning:
+"There may be useful suggestions available now."
+
+Triggered by:
+- MatchSuggestionsAvailableEvent
+
+Target user:
+- userId from the event
+
+Suggested mobile behavior:
+- open or refresh suggestions area
+- call GET /api/v1/matches/suggestions
+
+This notification is generic and must be conservative because it is not a direct invitation from another person.
+
+------------------------------------------------------------------------
+
+4. Notification Command
+
+Notifications are sent through SendNotificationCommand.
+
+Command fields:
+- userId
+- type
+- title
+- body
+- data
+
+The data map contains routing and context information for the mobile app.
+
+Example data for MATCH_PROPOSAL_CREATED:
+- matchId
+- initiatorUserId
+- channelType
+- targetScreen=incoming_matches
+
+Example data for MATCH_SUGGESTIONS_AVAILABLE:
+- targetScreen=match_suggestions
+- candidateUserIds
+- suggestionFingerprint
+- bestScore
+- overlapStart
+- overlapEnd
+
+The mobile app should not treat this data as source of truth. It should use it as a navigation hint and refresh from backend endpoints.
+
+------------------------------------------------------------------------
+
+5. Event Listeners
+
+5.1 MatchingNotificationListener
+
+The matching notification listener belongs to the notification module.
+
+It listens to matching events and maps them to notification commands.
+
+Handled events:
+- MatchProposalCreatedEvent
+- MatchSuggestionsAvailableEvent
+
+This preserves module boundaries:
+- matching publishes business events
+- notification decides how to notify
+
+------------------------------------------------------------------------
+
+6. Notification History
+
+Notification history is stored in the notification_history table.
+
+Current fields:
+- id
+- user_id
+- type
+- related_user_id
+- related_match_id
+- sent_at
+- metadata
+
+Business purpose:
+- avoid notification spam
+- support cooldown decisions
+- support deduplication
+- provide future observability
+
+Technical purpose:
+- persist notification decisions across application restarts
+- avoid relying on in-memory state
+
+------------------------------------------------------------------------
+
+7. Cooldown Rules
+
+7.1 Match Proposal Notifications
+
+MATCH_PROPOSAL_CREATED is not throttled by the generic cooldown.
+
+Reason:
+Each stored proposal is a concrete user action and should notify the candidate once.
+
+Future delivery logic may still add idempotency by relatedMatchId to protect against retries.
+
+7.2 Generic Suggestion Notifications
+
+MATCH_SUGGESTIONS_AVAILABLE uses cooldown.
+
+Current configuration:
+- sponti.notification.matching-suggestions-cooldown: 30m
+
+Business meaning:
+Do not repeatedly tell the same user that suggestions are available within a short time window.
+
+------------------------------------------------------------------------
+
+8. Deduplication Rules
+
+Cooldown alone is not enough.
+
+The system also stores notification metadata to identify repeated generic suggestion notifications.
+
+Current metadata includes:
+- suggestionFingerprint
+- candidateUserIds
+- bestScore
+- overlapStart
+- overlapEnd
+- targetScreen
+
+Current suppression rule:
+Suppress MATCH_SUGGESTIONS_AVAILABLE if the latest notification for the same user and type has:
+- same suggestion fingerprint
+- same or better best score
+
+Allow the notification if:
+- cooldown has expired and candidates changed
+- cooldown has expired and best score improved
+- no previous notification exists
+
+Business meaning:
+Do not notify the user again if the opportunity is basically the same as before.
+
+------------------------------------------------------------------------
+
+9. Placeholder Delivery
+
+Real push delivery is not implemented yet.
+
+Current behavior:
+- logs the notification as placeholder delivery
+- records notification history when the notification is not suppressed
+
+Future real delivery can be added behind the same application service without changing matching logic.
+
+Potential future components:
+- NotificationDispatcher
+- PushNotificationSender
+- FcmPushNotificationSender
+- ApnsPushNotificationSender
+- NotificationTemplateResolver
+- DeviceTokenRepository
+
+------------------------------------------------------------------------
+
+10. Mobile Contract
+
+Push notifications are signals, not state.
+
+The mobile app should:
+- receive push notification
+- use targetScreen only as navigation hint
+- call backend endpoint to refresh real data
+
+For MATCH_PROPOSAL_CREATED:
+- call GET /api/v1/matches/incoming
+
+For MATCH_SUGGESTIONS_AVAILABLE:
+- call GET /api/v1/matches/suggestions
+
+The app should handle stale notifications gracefully because the suggestion or proposal may no longer be valid by the time the user opens the app.
+
+------------------------------------------------------------------------
+
+11. Configuration
+
+Current notification configuration:
+- sponti.notification.matching-suggestions-cooldown
+
+Current matching configuration that influences notifications:
+- sponti.matching.opportunity-scheduler.enabled
+- sponti.matching.opportunity-scheduler.fixed-delay
+- sponti.matching.scoring.notification-minimum-score
+
+Recommended MVP defaults:
+- opportunity scheduler enabled
+- fixed delay 5 minutes
+- generic suggestion cooldown 30 minutes
+- notification minimum score higher than normal suggestion minimum score
+
+------------------------------------------------------------------------
+
+12. Production Considerations
+
+12.1 Delivery Idempotency
+
+When real push delivery is implemented, delivery should be idempotent enough to tolerate retries.
+
+For proposal notifications, relatedMatchId can be used as a natural idempotency key.
+
+12.2 Device Tokens
+
+Real push requires storing device tokens per user/device.
+
+The notification module should own this storage.
+
+12.3 Observability
+
+Useful metrics:
+- notifications requested
+- notifications sent
+- notifications suppressed by cooldown
+- notifications suppressed by deduplication
+- delivery failures
+- delivery retries
+
+12.4 Multiple Backend Instances
+
+Notification history is stored in the database, which helps across restarts and multiple instances.
+
+However, if multiple scheduler instances publish the same suggestion event at the same time, stronger locking or unique delivery keys may be needed later.
+
+------------------------------------------------------------------------
+
+13. To Do
+
+Future improvements:
+- implement real FCM/APNs delivery
+- add device token registration endpoints
+- store notification delivery status
+- use JSONB metadata instead of simple text metadata
+- add explicit notification fingerprint column
+- add idempotency protection for proposal notifications
+- add per-candidate cooldown for generic suggestions
+- add once-per-availability-window rule
+- add notification preference settings per user
+- add retry/backoff strategy for push provider failures
+
+------------------------------------------------------------------------
+
+14. Summary
+
+The Notification Module separates delivery concerns from business modules.
+
+Matching decides when a matching event happens.
+
+Notification decides how and whether to notify the user.

@@ -59,11 +59,6 @@ public class JwtTokenService {
         return Long.valueOf(parse(token).getPayload().getSubject());
     }
 
-    public String extractEmail(String token) {
-        return parse(token).getPayload().get("email", String.class);
-    }
-
-    @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
         Object roles = parse(token).getPayload().get("roles");
         if (roles instanceof List<?> list) {

@@ -1,0 +1,14 @@
+package com.mgrtech.sponti_api.contact.internal.application.view;
+
+import java.time.Instant;
+
+public record PendingContactInvitationView(
+        Long invitationId,
+        Long senderUserId,
+        String senderEmail,
+        String senderDisplayName,
+        String nickName,
+        String status,
+        Instant createdAt
+) {
+}

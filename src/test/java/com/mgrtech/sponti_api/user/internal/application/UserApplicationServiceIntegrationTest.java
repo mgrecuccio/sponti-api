@@ -3,16 +3,17 @@ package com.mgrtech.sponti_api.user.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
-import com.mgrtech.sponti_api.user.api.CreateUserCommand;
-import com.mgrtech.sponti_api.user.api.UserCredentialsQuery;
-import com.mgrtech.sponti_api.user.api.UserQueryFacade;
+import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
+import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
 @ModuleIntegrationTest
 class UserApplicationServiceIntegrationTest {
@@ -21,10 +22,16 @@ class UserApplicationServiceIntegrationTest {
     UserRegistrationFacade userRegistrationFacade;
 
     @Autowired
-    UserQueryFacade userQueryFacade;
+    UserProfileQuery userProfileQuery;
+
+    @Autowired
+    UserMatchingPreferencesQuery userMatchingPreferencesQuery;
 
     @Autowired
     UserCredentialsQuery userCredentialsQuery;
+
+    @Autowired
+    UserPreferenceRepository userPreferenceRepository;
 
     @Autowired
     DatabaseCleaner databaseCleaner;
@@ -47,11 +54,25 @@ class UserApplicationServiceIntegrationTest {
 
         assertThat(result.email()).isEqualTo("test@email.com");
 
-        var profile = userQueryFacade.getProfileById(result.id());
+        var profile = userProfileQuery.getProfileById(result.id());
         assertThat(profile).isPresent();
         assertThat(profile.get().email()).isEqualTo("test@email.com");
         assertThat(profile.get().displayName()).isEqualTo("nickname");
         assertThat(profile.get().timezone()).isEqualTo("UTC");
+
+        var persistedPreferences = userPreferenceRepository.findByUserId(result.id());
+        assertThat(persistedPreferences).isPresent();
+        assertThat(persistedPreferences.get().isAllowChat()).isTrue();
+        assertThat(persistedPreferences.get().isAllowCall()).isTrue();
+        assertThat(persistedPreferences.get().getQuietHoursStart()).isNull();
+        assertThat(persistedPreferences.get().getQuietHoursEnd()).isNull();
+
+        var matchingPreferences = userMatchingPreferencesQuery.getMatchingPreferences(result.id());
+        assertThat(matchingPreferences).isPresent();
+        assertThat(matchingPreferences.get().allowChat()).isTrue();
+        assertThat(matchingPreferences.get().allowCall()).isTrue();
+        assertThat(matchingPreferences.get().quietHoursStart()).isNull();
+        assertThat(matchingPreferences.get().quietHoursEnd()).isNull();
     }
 
     @Test
@@ -85,5 +106,27 @@ class UserApplicationServiceIntegrationTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().id()).isEqualTo(created.id());
+    }
+
+    @Test
+    void get__default_matching_user_preferences() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        var preferences = userMatchingPreferencesQuery.getMatchingPreferences(created.id());
+
+        assertThat(preferences.isPresent()).isTrue();
+        assertThat(preferences.get().userId()).isEqualTo(created.id());
+        assertThat(preferences.get().allowCall()).isTrue();
+        assertThat(preferences.get().allowChat()).isTrue();
+        assertThat(preferences.get().matchingEnabled()).isTrue();
+        assertThat(preferences.get().quietHoursStart()).isNull();
+        assertThat(preferences.get().quietHoursEnd()).isNull();
     }
 }

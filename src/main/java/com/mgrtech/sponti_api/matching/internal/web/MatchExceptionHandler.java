@@ -1,0 +1,63 @@
+package com.mgrtech.sponti_api.matching.internal.web;
+
+import com.mgrtech.sponti_api.matching.internal.exception.*;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice(basePackages = "com.mgrtech.sponti_api.matching.internal.web")
+public class MatchExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchExceptionHandler.class);
+
+    @ExceptionHandler({
+            MatchingDisabledException.class,
+            ChannelNotAllowedException.class,
+            AvailabilityOverlapNotFoundException.class,
+            MatchScoreBelowThresholdException.class
+    })
+    ProblemDetail handleUnprocessableContent(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.UNPROCESSABLE_CONTENT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(MatchAlreadyExistsException.class)
+    ProblemDetail handleMatchConflict(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.CONFLICT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(AcceptedContactNotFoundException.class)
+    ProblemDetail handleAcceptedContactNotFound(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.NOT_FOUND.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(MatchNotFoundException.class)
+    ProblemDetail handleMatchNotFound(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.NOT_FOUND.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    ProblemDetail handleIllegalState(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.CONFLICT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    private ProblemDetail problem(HttpStatus status, String detail, String path) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(status.getReasonPhrase());
+        problem.setProperty("path", path);
+        return problem;
+    }
+}

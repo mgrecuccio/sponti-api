@@ -1,6 +1,11 @@
 package com.mgrtech.sponti_api.contact.internal.web;
 
-import com.mgrtech.sponti_api.contact.api.*;
+import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
+import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
+import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,7 +25,7 @@ import java.util.List;
 @RequestMapping("/api/v1/contacts")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Contact", description = "Contact endpoints")
-public class ContactController {
+class ContactController {
 
     private final ContactFacade contactFacade;
 
@@ -88,7 +93,7 @@ public class ContactController {
         return contactFacade.editContact(
                 ownerUserId,
                 contactUserId,
-                new EditContactCommand(request.nickName(), request.favorite)
+                new EditContactCommand(request.nickName(), request.favorite())
         );
     }
 
@@ -128,6 +133,6 @@ public class ContactController {
             String nickName,
 
             @Schema(example = "true")
-            boolean favorite
+            Boolean favorite
     ) {}
 }

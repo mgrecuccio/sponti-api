@@ -2,8 +2,14 @@ package com.mgrtech.sponti_api.availability.internal.web;
 
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
-import com.mgrtech.sponti_api.availability.api.*;
+import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
+import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -138,6 +144,11 @@ class AvailabilityControllerTest {
 
         @Override
         public List<EffectiveAvailabilityView> getEffectiveAvailability(Long userId, Instant from, Instant to) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<EffectiveAvailabilityView> getChannelEffectiveAvailability(Long userId, Instant from, Instant to) {
             throw new UnsupportedOperationException();
         }
 
