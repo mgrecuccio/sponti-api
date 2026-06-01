@@ -1,0 +1,6 @@
+ALTER TABLE match_suggestions RENAME TO match_proposals;
+
+ALTER INDEX idx_match_suggestions_initiator_status RENAME TO idx_match_proposals_initiator_status;
+ALTER INDEX idx_match_suggestions_pair_created RENAME TO idx_match_proposals_pair_created;
+ALTER INDEX idx_match_suggestions_candidate RENAME TO idx_match_proposals_candidate;
+ALTER INDEX idx_match_suggestions_candidate_status_expires RENAME TO idx_match_proposals_candidate_status_expires;

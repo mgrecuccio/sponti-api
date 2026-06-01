@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.availability.internal.domain;
 
+import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.availability.internal.exception.InvalidAvailabilityRuleTimeRangeException;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -41,7 +42,7 @@ public class AvailabilityRuleEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "channel_type", nullable = false, length = 20)
-    private AvailabilityChannelType channelType;
+    private ChannelType channelType;
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
@@ -59,7 +60,7 @@ public class AvailabilityRuleEntity {
             DayOfWeek dayOfWeek,
             LocalTime startTime,
             LocalTime endTime,
-            AvailabilityChannelType channelType
+            ChannelType channelType
     ) {
         validateTimeRange(startTime, endTime);
 
@@ -81,7 +82,7 @@ public class AvailabilityRuleEntity {
             DayOfWeek dayOfWeek,
             LocalTime startTime,
             LocalTime endTime,
-            AvailabilityChannelType channelType,
+            ChannelType channelType,
             boolean enabled
     ) {
         validateTimeRange(startTime, endTime);

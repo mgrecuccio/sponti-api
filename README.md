@@ -16,6 +16,7 @@ Instead of broadcasting availability publicly, Sponti:
 * respects **quiet hours and preferences**
 * uses **mutual opt-in matching**
 * enables **real-time availability (Free Now)**
+* treats matching as an **invitation flow**, not automatic consent to chat or call
 
 ---
 
@@ -60,6 +61,16 @@ module/
 ```
 
 Spring Modulith enforces strict boundaries between modules.
+
+Current module responsibilities:
+
+* `auth`: JWT authentication and refresh tokens
+* `user`: user profile and matching preferences
+* `contact`: invitations, accepted contacts, contact metadata
+* `availability`: recurring rules, overrides, effective availability
+* `matching`: suggestions, proposals, candidate accept/decline, scheduler, matching events
+* `notification`: event listeners, notification commands, cooldown/history, placeholder delivery
+* `shared`: common enums, errors, and utilities
 
 ---
 
@@ -219,6 +230,16 @@ Integration tests use **Testcontainers**:
 
 No local DB setup required.
 
+Useful commands:
+
+```bash
+./mvnw -Dtest=ModulithStructureTest test
+```
+
+```bash
+./mvnw -Dtest=MatchSuggestionsServiceIntegrationTest test
+```
+
 ---
 
 ## 🧩 Key Domain Concepts
@@ -241,6 +262,53 @@ No local DB setup required.
 
     * Real-time "Free Now" state
     * Channel-aware (chat/call)
+
+* **MatchSuggestion**
+
+    * Computed on demand
+    * Not stored unless the user creates a proposal
+    * Ranked by scoring rules
+
+* **MatchProposal**
+
+    * Stored as `PROPOSED`
+    * Created by the initiator
+    * Accepted or declined by the candidate
+    * Emits matching events for notification handling
+
+* **NotificationHistory**
+
+    * Stores sent notification records
+    * Supports cooldown and deduplication
+    * Currently uses placeholder/log delivery
+
+---
+
+## 🔁 Matching And Notifications
+
+The matching engine uses a proposal/invitation model:
+
+1. `GET /api/v1/matches/suggestions` computes temporary suggestions.
+2. `POST /api/v1/matches` creates a stored proposal from `candidateUserId` and `channelType`.
+3. The backend recomputes score and overlap server-side before storing.
+4. Matching publishes `MatchProposalCreatedEvent`.
+5. The notification module listens and sends/logs a `MATCH_PROPOSAL_CREATED` notification.
+6. The candidate retrieves proposals with `GET /api/v1/matches/incoming`.
+7. The candidate accepts or declines.
+
+Generic suggestion notifications are also supported through a conservative scheduler:
+
+* scheduler evaluates matching-enabled users every configured interval
+* suggestions must be current or start before the next scheduler run
+* suggestions must pass a higher notification score threshold
+* notification history prevents repeated noisy notifications
+
+Push payloads are treated as signals only. Clients should refresh backend endpoints after receiving a notification.
+
+Detailed docs:
+
+* [`docs/4_matching_engine.txt`](docs/4_matching_engine.txt)
+* [`docs/9_notification_module.txt`](docs/5_notification_module.txt)
 
 ---
 
@@ -286,18 +354,29 @@ No local DB setup required.
 
 ### Phase 5 — Matching Engine
 
-* [ ] Mutual availability detection
-* [ ] Scoring logic
-* [ ] Cooldown handling
-* [ ] Match suggestions
+* [x] Mutual availability detection
+* [x] Scoring logic
+* [x] Cooldown handling
+* [x] Match suggestions
+* [x] Stored match proposals
+* [x] Candidate-side accept / decline
+* [x] Incoming match invitations
+* [x] Conservative suggestion scheduler
+* [ ] Domain-event-triggered suggestion checks, for example availability rule changes or accepted contacts
 
 ---
 
 ### Phase 6 — Notifications
 
-* [ ] Push notifications
-* [ ] Real-time triggers
-* [ ] Event-driven integration
+* [x] Event-driven integration
+* [x] Matching notification listener
+* [x] Notification type support
+* [x] Notification history table
+* [x] Cooldown and deduplication for generic suggestions
+* [x] Placeholder/log delivery
+* [ ] Real FCM/APNs push delivery
+* [ ] Device token management
+* [ ] Delivery status and retry handling
 
 ---
 

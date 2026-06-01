@@ -1,8 +1,20 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
-import com.mgrtech.sponti_api.user.api.*;
+import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
+import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
+import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
+import com.mgrtech.sponti_api.user.api.view.CreatedUserView;
+import com.mgrtech.sponti_api.user.api.view.UserCredentialsView;
+import com.mgrtech.sponti_api.user.api.view.UserLookupView;
+import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
+import com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity;
+import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
 import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -10,17 +22,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 
 @Service
 @AllArgsConstructor
-public class UserApplicationService implements UserRegistrationFacade, UserCredentialsQuery, UserQueryFacade {
+public class UserApplicationService implements UserRegistrationFacade, UserCredentialsQuery, UserProfileQuery, UserLookupQuery, UserMatchingPreferencesQuery {
 
     private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
 
     private final UserRepository userRepository;
+    private final UserPreferenceRepository userPreferenceRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,6 +65,21 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<UserMatchingPreferencesView> getMatchingPreferences(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> userPreferenceRepository.findByUserId(userId)
+                        .map(preferences -> toMatchingPreferencesView(user, preferences))
+                        .orElseGet(() -> defaultMatchingPreferencesView(user)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> getMatchingEnabledUserIds() {
+        return userPreferenceRepository.findMatchingEnabledUserIds();
+    }
+
+    @Override
     @Transactional
     public CreatedUserView createUser(CreateUserCommand command) {
         log.info("Registering user: email={}", command.email());
@@ -69,6 +98,7 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
         );
 
         var persistedUser = userRepository.save(user);
+        userPreferenceRepository.save(new UserPreferenceEntity(persistedUser));
         log.info("User registered: userId={}", persistedUser.getId());
 
         return new CreatedUserView(
@@ -99,5 +129,27 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
 
     private UserLookupView toLookupView(UserEntity user) {
         return new UserLookupView(user.getId(), user.getEmail());
+    }
+
+    private UserMatchingPreferencesView toMatchingPreferencesView(UserEntity user, UserPreferenceEntity preferences) {
+        return new UserMatchingPreferencesView(
+                user.getId(),
+                user.getTimezone(),
+                preferences.isAllowChat(),
+                preferences.isAllowCall(),
+                preferences.getQuietHoursStart(),
+                preferences.getQuietHoursEnd()
+        );
+    }
+
+    private UserMatchingPreferencesView defaultMatchingPreferencesView(UserEntity user) {
+        return new UserMatchingPreferencesView(
+                user.getId(),
+                user.getTimezone(),
+                true,
+                true,
+                null,
+                null
+        );
     }
 }

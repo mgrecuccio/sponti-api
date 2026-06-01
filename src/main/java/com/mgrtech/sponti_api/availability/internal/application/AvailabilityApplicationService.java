@@ -1,6 +1,13 @@
 package com.mgrtech.sponti_api.availability.internal.application;
 
-import com.mgrtech.sponti_api.availability.api.*;
+import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
+import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideEntity;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityRuleEntity;
 import com.mgrtech.sponti_api.availability.internal.exception.AvailabilityRuleNotFoundException;
@@ -18,7 +25,7 @@ import java.util.List;
 @Service
 @Transactional
 @AllArgsConstructor
-public class AvailabilityApplicationService implements AvailabilityFacade {
+public class AvailabilityApplicationService implements AvailabilityFacade, EffectiveAvailabilityQuery {
 
     private static final Logger log = LoggerFactory.getLogger(AvailabilityApplicationService.class);
     private final AvailabilityRuleRepository availabilityRuleRepository;
@@ -110,9 +117,19 @@ public class AvailabilityApplicationService implements AvailabilityFacade {
     @Transactional(readOnly = true)
     public List<EffectiveAvailabilityView> getEffectiveAvailability(Long userId, Instant from, Instant to) {
         log.info("Effective availabilities requested: userId={}", userId);
+        return effectiveAvailabilityService.computeChannelAgnostic(userId, from, to)
+                .stream()
+                .map(window -> new EffectiveAvailabilityView(window.start(), window.end(), window.channelType()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EffectiveAvailabilityView> getChannelEffectiveAvailability(Long userId, Instant from, Instant to) {
+        log.info("Channel effective availabilities requested: userId={}", userId);
         return effectiveAvailabilityService.compute(userId, from, to)
                 .stream()
-                .map(window -> new EffectiveAvailabilityView(window.start(), window.end()))
+                .map(window -> new EffectiveAvailabilityView(window.start(), window.end(), window.channelType()))
                 .toList();
     }
 

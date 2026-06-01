@@ -2,8 +2,8 @@ package com.mgrtech.sponti_api.user.internal.web;
 
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
-import com.mgrtech.sponti_api.user.api.UserProfileView;
-import com.mgrtech.sponti_api.user.api.UserQueryFacade;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,16 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "User", description = "User endpoints")
 public class UserController {
 
-    private final UserQueryFacade userQueryFacade;
+    private final UserProfileQuery userProfileQuery;
 
-    UserController(UserQueryFacade userQueryFacade) {
-        this.userQueryFacade = userQueryFacade;
+    UserController(UserProfileQuery userProfileQuery) {
+        this.userProfileQuery = userProfileQuery;
     }
 
     @GetMapping("/me")
     @Operation(summary = "Get the profile of an authenticated user")
     UserProfileView me(Authentication authentication) {
-        return userQueryFacade.getProfileById(extractUserId(authentication))
+        return userProfileQuery.getProfileById(extractUserId(authentication))
                 .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
     }
 

@@ -1,8 +1,8 @@
 package com.mgrtech.sponti_api.user.internal.web;
 
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
-import com.mgrtech.sponti_api.user.api.UserProfileView;
-import com.mgrtech.sponti_api.user.api.UserQueryFacade;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -26,14 +26,14 @@ class UserControllerTest {
     MockMvc mockMvc;
 
     @MockitoBean
-    UserQueryFacade userQueryFacade;
+    UserProfileQuery userProfileQuery;
 
     @MockitoBean
     JwtTokenService jwtTokenService;
 
     @Test
     void returns_profile_for_authenticated_user() throws Exception {
-        given(userQueryFacade.getProfileById(42L))
+        given(userProfileQuery.getProfileById(42L))
                 .willReturn(Optional.of(new UserProfileView(
                         42L, "john@example.com", "John", "ACTIVE", "utc"
                 )));
@@ -46,7 +46,7 @@ class UserControllerTest {
 
     @Test
     void returns_not_found_when_facade_returns_empty() throws Exception {
-        given(userQueryFacade.getProfileById(42L))
+        given(userProfileQuery.getProfileById(42L))
                 .willReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/users/me")

@@ -1,0 +1,612 @@
+Sponti — Matching Engine Documentation
+
+1. Overview
+
+The Matching Engine in Sponti helps existing contacts reconnect at a useful moment.
+
+The goal is not to discover strangers. The goal is to identify moments where two users who already know each other are both available, compatible on channel preferences, and likely to welcome an invitation.
+
+The matching engine currently supports:
+- computing temporary match suggestions
+- creating stored match proposals from selected suggestions
+- notifying users when strong suggestions may be available
+- retrieving incoming match invitations
+- candidate-side accept and decline
+- preventing duplicate active proposals
+- expiring proposals using an expiration timestamp
+
+Important business principle:
+Availability does not mean explicit consent to talk with a specific person right now.
+
+Availability means:
+"I am generally open to interaction during this window."
+
+It does not mean:
+"Anyone can immediately start a chat or call with me."
+
+For that reason, suggestions are opportunities to invite someone. A real chat or call should only be unlocked later after the candidate accepts the proposal.
+
+------------------------------------------------------------------------
+
+2. Core Concepts
+
+2.1 Match Suggestion
+
+A Match Suggestion is a temporary computed opportunity between two accepted contacts.
+
+It contains:
+- candidate user id
+- candidate nickname when available from the contact relationship
+- favorite flag
+- suggested channel, currently CHAT or CALL
+- score
+- overlap start
+- overlap end
+
+Suggestions returned by GET /api/v1/matches/suggestions are computed on demand and are not stored.
+
+This is intentional because suggestions are time-dependent. Availability, preferences, contacts, and existing proposals may change at any moment.
+
+2.2 Match Proposal
+
+A Match Proposal is created when the authenticated user chooses a candidate and a channel.
+
+The client sends only:
+- candidateUserId
+- channelType
+
+The client does not send:
+- score
+- overlapStart
+- overlapEnd
+
+The backend recomputes score and overlap server-side before storing the proposal.
+
+A stored proposal has status PROPOSED and represents:
+"I want to invite this candidate through this channel."
+
+2.3 Incoming Invitation
+
+An Incoming Invitation is a PROPOSED match where the authenticated user is the candidate.
+
+It answers:
+"Who invited me?"
+
+The candidate can accept or decline the incoming proposal.
+
+2.4 Match Status
+
+A stored match proposal can have the following lifecycle states:
+- PROPOSED: proposal created and waiting for candidate response
+- ACCEPTED: candidate accepted the incoming proposal
+- DECLINED: candidate declined the incoming proposal
+- EXPIRED: reserved for proposals that are no longer valid
+- CANCELLED: reserved for future initiator-side cancellation
+
+The important ownership rule is:
+- the initiator creates the proposal
+- the candidate accepts or declines it
+
+The initiator must not accept or decline their own outgoing proposal.
+
+------------------------------------------------------------------------
+
+3. Generic Flow
+
+3.1 User Asks For Suggestions
+
+The mobile app calls:
+GET /api/v1/matches/suggestions
+
+The backend computes suggestions for the authenticated user by checking:
+- accepted contacts
+- matching preferences
+- effective availability
+- channel compatibility
+- existing active proposals
+- recent matching history
+- score threshold
+
+The endpoint returns at most three suggestions ordered by score.
+
+3.2 User Creates A Proposal
+
+The mobile app sends:
+POST /api/v1/matches
+
+Request body:
+- candidateUserId
+- channelType
+
+The backend recomputes the proposal from scratch:
+- checks that candidate is still an accepted contact
+- checks that no active proposal already exists for the pair in either direction
+- checks that both users still have matching enabled
+- checks that selected channel is still allowed by both users
+- checks that both users still have valid effective availability overlap
+- recalculates score
+- verifies minimum score threshold
+- stores the proposal as PROPOSED
+- publishes MatchProposalCreatedEvent
+
+3.3 Candidate Receives Notification
+
+After proposal creation, the matching module publishes a domain/application event.
+
+The notification module listens to the event and sends a notification to the candidate.
+
+The push notification is only a signal. The mobile app should refresh backend state and should not treat the push payload as source of truth.
+
+3.4 Candidate Reads Incoming Invitations
+
+The mobile app calls:
+GET /api/v1/matches/incoming
+
+This returns pending active proposals where:
+- candidateUserId is the authenticated user
+- status is PROPOSED
+- proposal is not expired
+
+3.5 Candidate Accepts Or Declines
+
+The candidate calls one of:
+- PATCH /api/v1/matches/{id}/accept
+- PATCH /api/v1/matches/{id}/decline
+
+The backend allows the action only if:
+- authenticated user is the candidate
+- proposal exists
+- proposal status is PROPOSED
+
+After acceptance, the future chat/call flow can be unlocked by the product.
+
+After decline, no interaction should start.
+
+------------------------------------------------------------------------
+
+4. API-Level Behavior
+
+4.1 GET /api/v1/matches/suggestions
+
+Business meaning:
+"Who could I invite?"
+
+Behavior:
+- computes suggestions on demand
+- does not store computed suggestions
+- returns max three suggestions
+- orders by score descending
+- applies hard rules and soft scoring
+
+4.2 POST /api/v1/matches
+
+Business meaning:
+"I want to invite this candidate through this channel."
+
+Behavior:
+- accepts candidateUserId and channelType
+- recomputes score and overlap server-side
+- stores a PROPOSED match proposal
+- computes expiresAt
+- publishes MatchProposalCreatedEvent
+
+4.3 GET /api/v1/matches/incoming
+
+Business meaning:
+"Who invited me?"
+
+Behavior:
+- returns active pending proposals where authenticated user is candidate
+- excludes accepted proposals
+- excludes declined proposals
+- excludes expired proposals
+- orders by createdAt descending or another sensible repository order
+
+4.4 PATCH /api/v1/matches/{id}/accept
+
+Business meaning:
+"I accept this invitation that was sent to me."
+
+Behavior:
+- authenticated user must be candidate
+- proposal must be PROPOSED
+- proposal becomes ACCEPTED
+- respondedAt is set
+
+4.5 PATCH /api/v1/matches/{id}/decline
+
+Business meaning:
+"I decline this invitation that was sent to me."
+
+Behavior:
+- authenticated user must be candidate
+- proposal must be PROPOSED
+- proposal becomes DECLINED
+- respondedAt is set
+
+------------------------------------------------------------------------
+
+5. Domain Events
+
+5.1 MatchProposalCreatedEvent
+
+Published by the matching module after a proposal is successfully stored.
+
+Business meaning:
+"A user invited a candidate to connect through a channel."
+
+Event data:
+- matchId
+- initiatorUserId
+- candidateUserId
+- channelType
+- overlapStart
+- overlapEnd
+
+The notification module listens to this event and sends a MATCH_PROPOSAL_CREATED notification to the candidate.
+
+5.2 MatchSuggestionsAvailableEvent
+
+Published by the matching module when the conservative scheduler detects strong current suggestions for a user.
+
+Business meaning:
+"This user may have useful suggestions right now."
+
+Event data:
+- userId
+- candidateUserIds
+- bestScore
+- overlapStart
+- overlapEnd
+
+The notification module listens to this event and sends a MATCH_SUGGESTIONS_AVAILABLE notification, subject to cooldown and deduplication.
+
+------------------------------------------------------------------------
+
+6. Hard Rules
+
+Hard rules are mandatory. If one hard rule fails, the candidate is not suggested or the proposal is not created.
+
+6.1 Accepted Contact Required
+
+A candidate is matchable only if the pair has an accepted contact relationship.
+
+The matching engine does not propose unknown users and does not bypass the contact consent model.
+
+6.2 Mutual Matching Enabled
+
+Both users must have matching enabled.
+
+Currently matching is considered enabled when the user allows at least one channel, CHAT or CALL.
+
+6.3 Channel Allowed By Both Users
+
+The selected channel must be allowed by both users.
+
+Example:
+If the initiator allows CHAT but the candidate does not allow CHAT, CHAT cannot be used for that pair.
+
+6.4 Availability Overlap Required
+
+Both users must have overlapping effective availability.
+
+The overlap must satisfy the configured minimum overlap duration.
+
+Availability windows can be channel-specific or channel-agnostic:
+- if both windows specify a channel, the channels must match
+- if one window is channel-agnostic, it can support the requested channel
+- if both windows are channel-agnostic, the engine can consider both CHAT and CALL
+
+Overrides are channel-agnostic by business design because users do not specify channel type when creating overrides.
+
+6.5 Active Proposal Prevention
+
+The system prevents duplicate active proposals for the same pair.
+
+If User A already has a PROPOSED match with User B, another proposal between the same two users is not allowed, regardless of direction.
+
+6.6 Minimum Score Required
+
+After scoring, the final score must be greater than or equal to the configured minimum score.
+
+This minimum applies to suggestions shown by the API and proposals created by POST /api/v1/matches.
+
+------------------------------------------------------------------------
+
+7. Soft Rules And Scoring
+
+Soft rules do not directly block matching. They influence score.
+
+The score is used to rank candidates and filter out low-quality suggestions.
+
+7.1 Base Score
+
+The base score is the overlap duration in minutes.
+
+Example:
+If both users are available together for 45 minutes, the base score starts at 45.
+
+7.2 Favorite Boost
+
+If the contact is marked as favorite by the initiator, the score receives a positive boost.
+
+Business meaning:
+The user explicitly indicated that this contact matters more.
+
+7.3 Free-Now Boost
+
+If the overlap starts now or has already started, the score receives a positive boost.
+
+Business meaning:
+Immediate opportunities are more valuable for spontaneous interaction.
+
+7.4 Quiet Hours Penalty
+
+If either user is currently inside quiet hours, the score receives a penalty.
+
+Business meaning:
+The match may still be possible, but the timing is less ideal.
+
+7.5 Recent Accepted Penalty
+
+If the same pair recently had an accepted match, the score receives a penalty.
+
+Business meaning:
+Avoid over-suggesting the same person immediately after a successful interaction.
+
+7.6 Recent Decline Penalty
+
+If the same pair recently had a declined match, the score receives a penalty.
+
+Business meaning:
+A recent decline signals that the timing or pairing may not be welcome right now.
+
+7.7 Recent Suggestion Penalty
+
+If the same pair was recently suggested or proposed, the score receives a penalty.
+
+Business meaning:
+Keep suggestions fresh and avoid repeatedly pushing the same candidate.
+
+------------------------------------------------------------------------
+
+8. Candidate Ranking
+
+The suggestions endpoint computes a score for each eligible accepted contact.
+
+The engine then:
+- removes candidates that fail hard rules
+- removes candidates below minimum score
+- sorts remaining candidates by score descending
+- returns at most three suggestions
+
+This keeps the mobile experience focused.
+
+------------------------------------------------------------------------
+
+9. Conservative Suggestion Scheduler
+
+9.1 Purpose
+
+The scheduler exists so members can be informed when there may be useful suggestions without relying only on client polling.
+
+It answers:
+"Should this user be notified that there are match suggestions available now?"
+
+It does not store suggestions.
+
+It does not create proposals.
+
+It only triggers a notification signal when the current situation is strong enough.
+
+9.2 Current Configuration
+
+Current configuration:
+- sponti.matching.opportunity-scheduler.enabled: true
+- sponti.matching.opportunity-scheduler.fixed-delay: 5m
+- sponti.matching.scoring.notification-minimum-score: 80
+- sponti.notification.matching-suggestions-cooldown: 30m
+
+The first scheduler run is delayed by the fixed delay to avoid startup spikes.
+
+9.3 Scheduler Flow
+
+Every configured interval, the scheduler:
+- loads matching-enabled user ids
+- calls the existing getSuggestions algorithm for each user
+- keeps only suggestions that are active right now
+- keeps only suggestions whose score is at least notification-minimum-score
+- publishes MatchSuggestionsAvailableEvent if at least one strong current suggestion exists
+
+9.4 Conservative Rules
+
+The scheduler is stricter than the normal suggestions endpoint.
+
+The normal endpoint can show useful suggestions above minimum-score.
+
+The scheduler only notifies when:
+- the suggestion is active now
+- the best score reaches notification-minimum-score
+- notification cooldown allows it
+- the same top candidates were not already notified with the same or better score
+
+This avoids waking the user for weak or repetitive opportunities.
+
+9.5 Why This Is Conservative
+
+Generic suggestion notifications can be noisy because they do not represent a concrete invitation from a specific user.
+
+A concrete match proposal is explicit:
+"Marco invited you to chat."
+
+A generic suggestion notification is softer:
+"There may be people available now."
+
+Therefore generic suggestions require stronger filtering.
+
+------------------------------------------------------------------------
+
+10. Proposal Expiration
+
+Stored proposals include expiresAt.
+
+Expiration is computed as the earlier of:
+- overlapEnd
+- createdAt + configured proposal TTL
+
+Business meaning:
+A proposal should not stay pending after the useful availability window has passed.
+
+Incoming matches should not return expired proposals.
+
+A future cleanup process can mark old PROPOSED rows as EXPIRED.
+
+------------------------------------------------------------------------
+
+11. Error Behavior
+
+The matching endpoints return business errors when a match cannot be created or changed.
+
+Examples:
+- candidate is not an accepted contact
+- matching is disabled for one of the users
+- requested channel is not allowed by both users
+- no valid availability overlap exists
+- candidate score is below configured minimum
+- a proposed match already exists for the pair
+- match proposal does not belong to the authenticated candidate
+- proposal is no longer in PROPOSED status
+
+These errors protect consent, prevent duplicates, and avoid storing invalid or stale proposals.
+
+------------------------------------------------------------------------
+
+12. Mobile App Usage
+
+The mobile app should use push notifications as signals, not as source of truth.
+
+Recommended behavior:
+- app receives MATCH_SUGGESTIONS_AVAILABLE push
+- app opens or refreshes suggestions screen
+- app calls GET /api/v1/matches/suggestions
+- user selects a suggestion
+- app calls POST /api/v1/matches
+
+For incoming proposals:
+- app receives MATCH_PROPOSAL_CREATED push
+- app opens incoming invitations screen
+- app calls GET /api/v1/matches/incoming
+- candidate accepts or declines
+
+The push payload should not be used to render final state without backend refresh.
+
+------------------------------------------------------------------------
+
+13. Technical Boundaries
+
+Matching module responsibilities:
+- compute suggestions
+- validate hard rules
+- calculate score
+- create proposals
+- own proposal lifecycle rules
+- publish matching events
+- run conservative opportunity checks
+
+Notification module responsibilities:
+- listen to matching events
+- map events to notification types
+- format notification title/body/data
+- send placeholder or real push notifications
+- store notification history
+- apply cooldown and deduplication
+
+The matching module should not directly send push notifications.
+
+The notification module should not compute matching suggestions.
+
+------------------------------------------------------------------------
+
+14. To Do
+
+14.1 Domain Events That Could Trigger getSuggestions
+
+The scheduler handles time-based opportunities, but time is not the only reason a suggestion can become interesting.
+
+Future domain/application events can trigger the same opportunity check for affected users.
+
+Potential events:
+- FreeNowActivatedEvent
+- FreeNowDeactivatedEvent
+- AvailabilityRuleCreatedEvent
+- AvailabilityRuleUpdatedEvent
+- AvailabilityRuleDeletedEvent
+- AvailabilityOverrideCreatedEvent
+- AvailabilityOverrideUpdatedEvent
+- AvailabilityOverrideDeletedEvent
+- ContactInvitationAcceptedEvent
+- ContactFavoriteChangedEvent
+- MatchingPreferencesUpdatedEvent
+- UserQuietHoursUpdatedEvent
+
+Business meaning:
+When a user changes availability, preferences, or contact state, suggestions may become available immediately. The backend should not always wait for the next scheduled tick.
+
+14.2 Reusable Opportunity Check
+
+Future event listeners should reuse the same application service used by the scheduler.
+
+Target shape:
+- scheduler calls checkCurrentOpportunities()
+- event listeners call checkCurrentOpportunitiesForUser(userId)
+- notification history prevents spam across both paths
+
+This keeps the system consistent and avoids duplicate matching logic.
+
+14.3 Distributed Scheduling
+
+The scheduler currently runs inside the backend application.
+
+This is acceptable for MVP.
+
+Before running multiple backend instances in production, add one of:
+- distributed lock
+- database advisory lock
+- ShedLock
+- single-replica worker deployment
+- Azure Function or Azure WebJob worker
+
+Without this, multiple backend instances could run the same scheduler at the same time.
+
+14.4 Proposal Cleanup
+
+A future scheduled cleanup should mark expired PROPOSED proposals as EXPIRED.
+
+Incoming proposals already exclude expired proposals from the user experience, but explicit cleanup keeps data clearer.
+
+14.5 Stronger Notification Deduplication
+
+Current deduplication stores metadata as a simple text payload.
+
+Future improvements could include:
+- JSONB metadata
+- dedicated notification fingerprint column
+- per-candidate cooldown
+- once-per-availability-window notification rule
+- notification delivery status tracking
+
+------------------------------------------------------------------------
+
+15. Summary
+
+The Matching Engine combines contact consent, availability, channel preferences, scoring, proposals, and event-driven notifications.
+
+Its main design principles are:
+- only match accepted contacts
+- availability is not direct consent
+- suggestions are computed on demand
+- proposals are stored only after server-side recomputation
+- the candidate owns accept and decline decisions
+- matching publishes events instead of sending notifications directly
+- generic suggestion notifications are conservative
+- the mobile app refreshes backend state after push signals
