@@ -45,3 +45,26 @@ logging:
     json:
       context:
         include: true
+
+sponti:
+  matching:
+    search-window: 4h
+    minimum-overlap: 20m
+    accepted-cooldown: 48h
+    decline-cooldown: 24h
+    suggestion-cooldown: 2h
+    proposal-ttl: 30m
+    opportunity-scheduler:
+      enabled: true
+      fixed-delay: 5m
+    scoring:
+      favorite-boost: 10
+      free-now-boost: 20
+      recent-accepted-penalty: 40
+      recent-decline-penalty: 30
+      recent-suggestion-penalty: 20
+      quiet-hours-penalty: 50
+      minimum-score: 1
+      notification-minimum-score: 60
+  notification:
+    matching-suggestions-cooldown: 30m

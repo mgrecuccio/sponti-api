@@ -1,7 +1,13 @@
 package com.mgrtech.sponti_api.availability.internal.web;
 
-import com.mgrtech.sponti_api.availability.api.*;
-import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityChannelType;
+import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
+import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
+import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -136,7 +142,7 @@ class AvailabilityController {
             @Schema(example = "MONDAY") @NotNull DayOfWeek dayOfWeek,
             @Schema(example = "09:00:00") @NotNull LocalTime startTime,
             @Schema(example = "12:00:00") @NotNull LocalTime endTime,
-            @Schema(example = "CHAT") @NotNull AvailabilityChannelType channelType
+            @Schema(example = "CHAT") @NotNull ChannelType channelType
     ) {}
 
     @Schema(description = "Update Availability Rule request payload")
@@ -144,7 +150,7 @@ class AvailabilityController {
             @Schema(example = "MONDAY") @NotNull DayOfWeek dayOfWeek,
             @Schema(example = "09:00:00") @NotNull LocalTime startTime,
             @Schema(example = "12:00:00") @NotNull LocalTime endTime,
-            @Schema(example = "CHAT") @NotNull AvailabilityChannelType channelType,
+            @Schema(example = "CHAT") @NotNull ChannelType channelType,
             @NotNull Boolean enabled
     ) {}
 

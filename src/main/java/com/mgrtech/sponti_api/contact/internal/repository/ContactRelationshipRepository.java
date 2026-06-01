@@ -21,6 +21,12 @@ public interface ContactRelationshipRepository extends JpaRepository<ContactRela
             Long contactUserId
     );
 
+    Optional<ContactRelationshipEntity> findByOwnerUserIdAndAndContactUserIdAndRelationshipStatus(
+            Long ownerUserId,
+            Long contactUserId,
+            RelationshipStatus relationshipStatus
+    );
+
     boolean existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
             Long ownerUserId,
             Long contactUserId,

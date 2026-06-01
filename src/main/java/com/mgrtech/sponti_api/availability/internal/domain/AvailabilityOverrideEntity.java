@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.availability.internal.domain;
 
+import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.availability.internal.exception.InvalidAvailabilityOverrideTimeRangeException;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -7,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(

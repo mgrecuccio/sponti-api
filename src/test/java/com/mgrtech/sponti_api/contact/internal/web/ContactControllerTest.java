@@ -2,7 +2,12 @@ package com.mgrtech.sponti_api.contact.internal.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
-import com.mgrtech.sponti_api.contact.api.*;
+import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
+import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
+import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,6 +162,32 @@ class ContactControllerTest {
                         .principal(new TestingAuthenticationToken("42", null))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(jsonPath("$.contactUserId").value(33L))
+                .andExpect(jsonPath("$.nickName").value(request.nickName()))
+                .andExpect(jsonPath("$.favorite").value(Boolean.TRUE));
+    }
+
+    @Test
+    void edit_contact_accepts_null_favorite() throws Exception {
+        var request = new ContactController.UpdateContactRequest("teamMate", null);
+
+        given(contactFacade.editContact(
+                42L,
+                33L,
+                new EditContactCommand(request.nickName(), null))
+        )
+                .willReturn(new ContactView(
+                        33L,
+                        request.nickName(),
+                        Boolean.TRUE,
+                        Instant.now()
+                ));
+
+        mockMvc.perform(put("/api/v1/contacts/{contactUserId}", 33L)
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contactUserId").value(33L))
                 .andExpect(jsonPath("$.nickName").value(request.nickName()))
                 .andExpect(jsonPath("$.favorite").value(Boolean.TRUE));

@@ -1,6 +1,11 @@
 package com.mgrtech.sponti_api.contact.internal.application;
 
-import com.mgrtech.sponti_api.contact.api.*;
+import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
+import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
+import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactInvitationEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactRelationshipEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.InvitationStatus;
@@ -9,8 +14,10 @@ import com.mgrtech.sponti_api.contact.internal.exception.*;
 import com.mgrtech.sponti_api.contact.internal.repository.ContactInvitationRepository;
 import com.mgrtech.sponti_api.contact.internal.repository.ContactRelationshipRepository;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
-import com.mgrtech.sponti_api.user.api.UserQueryFacade;
+import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import lombok.AllArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +28,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 
@@ -33,7 +41,8 @@ class ContactApplicationService implements ContactFacade {
 
     private final ContactInvitationRepository contactInvitationRepository;
     private final ContactRelationshipRepository contactRelationshipRepository;
-    private final UserQueryFacade userQueryFacade;
+    private final UserLookupQuery userLookupQuery;
+    private final UserProfileQuery userProfileQuery;
     private final Clock clock;
 
     @Override
@@ -41,7 +50,7 @@ class ContactApplicationService implements ContactFacade {
         log.info("Send contact invitation requested: senderUserId={}", senderUserId);
         var now = Instant.now(clock);
 
-        var recipient = userQueryFacade.findByEmailForLookup(normalizeEmail(command.email()))
+        var recipient = userLookupQuery.findByEmailForLookup(normalizeEmail(command.email()))
                 .orElseThrow(() -> {
                     log.warn("Send invitation failed: recipient not found for senderUserId={}", senderUserId);
                     return new UserNotFoundException(
@@ -145,7 +154,8 @@ class ContactApplicationService implements ContactFacade {
     @Override
     @Transactional(readOnly = true)
     public List<ContactView> getAcceptedContacts(Long ownerUserId) {
-        return contactRelationshipRepository
+        log.info("Accepted contacts requested for userId={}", ownerUserId);
+        var acceptedContacts = contactRelationshipRepository
                 .findAllByOwnerUserIdAndRelationshipStatusOrderByCreatedAtDesc(ownerUserId, RelationshipStatus.ACCEPTED)
                 .stream()
                 .map(relationship -> new ContactView(
@@ -155,6 +165,16 @@ class ContactApplicationService implements ContactFacade {
                         relationship.getCreatedAt()
                 ))
                 .toList();
+        log.info("Found {} accepted contacts for userId={}", acceptedContacts.size(), ownerUserId);
+        return acceptedContacts;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ContactView> findAcceptedContact(Long userId, Long candidateUserId) {
+        return contactRelationshipRepository
+                .findByOwnerUserIdAndAndContactUserIdAndRelationshipStatus(userId, candidateUserId, RelationshipStatus.ACCEPTED)
+                .map(this::toContactView);
     }
 
     @Override
@@ -198,7 +218,7 @@ class ContactApplicationService implements ContactFacade {
 
         if (ownerUserId.equals(contactUserId)) {
             log.warn("Users cannot edit themselves: ownerUserId={} contactUserId={}", ownerUserId, contactUserId);
-            throw new CannotRemoveSelfException();
+            throw new CannotEditSelfContactException();
         }
 
         if(!contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
@@ -213,7 +233,9 @@ class ContactApplicationService implements ContactFacade {
                 .orElseThrow(ContactNotFoundException::new);
 
         var newNickName = command.nickName();
-        var favorite = command.favorite();
+        var favorite = command.favorite() != null
+                ? command.favorite()
+                : relationship.isFavorite();
 
         relationship.edit(newNickName, favorite);
         log.info("OwnerUserId={} edited contactUserId={}: new nickName={}, favorite={}",
@@ -223,6 +245,10 @@ class ContactApplicationService implements ContactFacade {
                 favorite
         );
 
+        return toContactView(relationship);
+    }
+
+    private ContactView toContactView(ContactRelationshipEntity relationship) {
         return new ContactView(
                 relationship.getContactUserId(),
                 relationship.getNickname(),
@@ -272,7 +298,7 @@ class ContactApplicationService implements ContactFacade {
     }
 
     private SenderProfile loadSenderProfile(Long senderUserId) {
-        return userQueryFacade.getProfileById(senderUserId)
+        return userProfileQuery.getProfileById(senderUserId)
                 .map(profile -> new SenderProfile(profile.email(), profile.displayName()))
                 .orElseGet(() -> new SenderProfile(null, null));
     }

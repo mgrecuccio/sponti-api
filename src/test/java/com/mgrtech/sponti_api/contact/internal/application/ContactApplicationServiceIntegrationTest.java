@@ -2,12 +2,12 @@ package com.mgrtech.sponti_api.contact.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FullIntegrationTest;
-import com.mgrtech.sponti_api.contact.api.ContactFacade;
-import com.mgrtech.sponti_api.contact.api.EditContactCommand;
-import com.mgrtech.sponti_api.contact.api.SendContactInvitationCommand;
+import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
+import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.exception.*;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
-import com.mgrtech.sponti_api.user.api.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,6 +142,24 @@ class ContactApplicationServiceIntegrationTest {
                 sender.id(),
                 sender.id()
         )).isInstanceOf(CannotRemoveSelfException.class);
+    }
+
+    @Test
+    void edit_contact_throws_exception_when_sender_edits_self() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+
+        assertThatThrownBy(() -> contactFacade.editContact(
+                sender.id(),
+                sender.id(),
+                new EditContactCommand("Self", true)
+        )).isInstanceOf(CannotEditSelfContactException.class);
     }
 
     @Test
@@ -358,6 +376,39 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
+    void edit_contact_preserves_favorite_flag_when_favorite_is_null() {
+        var userA = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "preserve-a@example.com",
+                        "hash",
+                        "Preserve A",
+                        "UTC"
+                )
+        );
+        var userB = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "preserve-b@example.com",
+                        "hash",
+                        "Preserve B",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                userA.id(),
+                new SendContactInvitationCommand(userB.email(), "B")
+        );
+        contactFacade.acceptInvitation(userB.id(), invitation.id());
+
+        contactFacade.editContact(userB.id(), userA.id(), new EditContactCommand("A", true));
+        contactFacade.editContact(userB.id(), userA.id(), new EditContactCommand("A updated", null));
+
+        var bContacts = contactFacade.getAcceptedContacts(userB.id());
+        assertThat(bContacts.getFirst().nickName()).isEqualTo("A updated");
+        assertThat(bContacts.getFirst().favorite()).isTrue();
+    }
+
+    @Test
     void get_pending_incoming_invitations_returns_only_pending_for_recipient_in_desc_order() {
         var recipient = userRegistrationFacade.createUser(
                 new CreateUserCommand(
@@ -424,7 +475,64 @@ class ContactApplicationServiceIntegrationTest {
         assertThat(pending.get(1).senderDisplayName()).isEqualTo(senderOne.displayName());
         assertThat(pending.get(1).nickName()).isEqualTo("New teammate One");
         assertThat(pending.get(1).status()).isEqualTo("PENDING");
+    }
 
+    @Test
+    void find_accepted_contact_returns_null_if_relationship_does_not_exist() {
+        var userA = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "a@example.com",
+                        "hash",
+                        "A",
+                        "UTC"
+                )
+        );
+        var userB = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "b@example.com",
+                        "hash",
+                        "B",
+                        "UTC"
+                )
+        );
 
+        contactFacade.sendInvitation(
+                userA.id(),
+                new SendContactInvitationCommand(userB.email(), "B")
+        );
+
+        var acceptedContact = contactFacade.findAcceptedContact(userA.id(), userB.id());
+        assertThat(acceptedContact).isEmpty();
+    }
+
+    @Test
+    void find_accepted_contact() {
+        var userA = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "a@example.com",
+                        "hash",
+                        "A",
+                        "UTC"
+                )
+        );
+        var userB = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "b@example.com",
+                        "hash",
+                        "B",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                userA.id(),
+                new SendContactInvitationCommand(userB.email(), "B")
+        );
+
+        contactFacade.acceptInvitation(userB.id(), invitation.id());
+
+        var acceptedContact = contactFacade.findAcceptedContact(userA.id(), userB.id());
+        assertThat(acceptedContact).isNotEmpty();
+        assertThat(acceptedContact.get().contactUserId()).isEqualTo(userB.id());
     }
 }

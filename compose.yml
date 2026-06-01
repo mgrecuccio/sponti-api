@@ -23,23 +23,6 @@ services:
       timeout: 5s
       retries: 5
 
-  sponti-api:
-    build: .
-    container_name: sponti-api
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sponti
-      SPRING_DATASOURCE_USERNAME: sponti
-      SPRING_DATASOURCE_PASSWORD: sponti
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     environment:
