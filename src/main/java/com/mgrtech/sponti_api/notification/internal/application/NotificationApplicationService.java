@@ -36,12 +36,13 @@ class NotificationApplicationService implements NotificationFacade {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void send(SendNotificationCommand command) {
         var now = Instant.now(clock);
-        var decision = sendDecision(command, now);
+        var relatedMatchId = longValue(command.data(), "relatedMatchId", "matchId");
+        var decision = sendDecision(command, relatedMatchId, now);
         var history = new NotificationHistoryEntity(
                 command.userId(),
                 command.type(),
                 longValue(command.data(), "relatedUserId", "initiatorUserId"),
-                longValue(command.data(), "relatedMatchId", "matchId"),
+                relatedMatchId,
                 now,
                 metadata(command)
         );
@@ -61,11 +62,38 @@ class NotificationApplicationService implements NotificationFacade {
         dispatcher.dispatch(history, command);
     }
 
-    private SendDecision sendDecision(SendNotificationCommand command, Instant now) {
-        if (command.type() != NotificationType.MATCH_SUGGESTIONS_AVAILABLE) {
+    private SendDecision sendDecision(SendNotificationCommand command, Long relatedMatchId, Instant now) {
+        if (command.type() == NotificationType.MATCH_PROPOSAL_CREATED) {
+            return proposalCreatedSendDecision(command, relatedMatchId);
+        }
+
+        if (command.type() == NotificationType.MATCH_SUGGESTIONS_AVAILABLE) {
+            return matchingSuggestionsSendDecision(command, now);
+        }
+
+        return SendDecision.allowed();
+    }
+
+    private SendDecision proposalCreatedSendDecision(SendNotificationCommand command, Long relatedMatchId) {
+        if (relatedMatchId == null) {
             return SendDecision.allowed();
         }
 
+        if (repository.existsByUserIdAndTypeAndRelatedMatchId(
+                command.userId(),
+                command.type(),
+                relatedMatchId
+        )) {
+            return SendDecision.suppressed(
+                    "duplicate-business-key",
+                    "type=%s userId=%d relatedMatchId=%d".formatted(command.type(), command.userId(), relatedMatchId)
+            );
+        }
+
+        return SendDecision.allowed();
+    }
+
+    private SendDecision matchingSuggestionsSendDecision(SendNotificationCommand command, Instant now) {
         return repository.findFirstByUserIdAndTypeAndStatusOrderBySentAtDesc(
                         command.userId(),
                         command.type(),
