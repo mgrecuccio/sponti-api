@@ -4,6 +4,7 @@ import com.mgrtech.sponti_api.notification.api.NotificationFacade;
 import com.mgrtech.sponti_api.notification.api.NotificationType;
 import com.mgrtech.sponti_api.notification.api.command.SendNotificationCommand;
 import com.mgrtech.sponti_api.notification.internal.configuration.NotificationProperties;
+import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationHistoryRepository;
 import lombok.AllArgsConstructor;
@@ -29,12 +30,21 @@ class NotificationApplicationService implements NotificationFacade {
     private final Clock clock;
     private final NotificationProperties properties;
     private final NotificationHistoryRepository repository;
+    private final NotificationDispatcher dispatcher;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void send(SendNotificationCommand command) {
         var now = Instant.now(clock);
         var decision = sendDecision(command, now);
+        var history = new NotificationHistoryEntity(
+                command.userId(),
+                command.type(),
+                longValue(command.data(), "relatedUserId", "initiatorUserId"),
+                longValue(command.data(), "relatedMatchId", "matchId"),
+                now,
+                metadata(command)
+        );
 
         if (!decision.canSend()) {
             log.info(
@@ -47,15 +57,8 @@ class NotificationApplicationService implements NotificationFacade {
             return;
         }
 
-        log.info("Placeholder notification for user {}: {}", command.userId(), command.title());
-        repository.save(new NotificationHistoryEntity(
-                command.userId(),
-                command.type(),
-                longValue(command.data(), "relatedUserId", "initiatorUserId"),
-                longValue(command.data(), "relatedMatchId", "matchId"),
-                now,
-                metadata(command.data())
-        ));
+        repository.save(history);
+        dispatcher.dispatch(history, command);
     }
 
     private SendDecision sendDecision(SendNotificationCommand command, Instant now) {
@@ -63,7 +66,11 @@ class NotificationApplicationService implements NotificationFacade {
             return SendDecision.allowed();
         }
 
-        return repository.findFirstByUserIdAndTypeOrderBySentAtDesc(command.userId(), command.type())
+        return repository.findFirstByUserIdAndTypeAndStatusOrderBySentAtDesc(
+                        command.userId(),
+                        command.type(),
+                        NotificationDeliveryStatus.SENT
+                )
                 .map(latest -> sendDecision(command, latest, now))
                 .orElseGet(SendDecision::allowed);
     }
@@ -118,6 +125,13 @@ class NotificationApplicationService implements NotificationFacade {
 
         var value = data.getOrDefault(preferredKey, data.get(fallbackKey));
         return value != null ? Long.valueOf(value) : null;
+    }
+
+    private String metadata(SendNotificationCommand command) {
+        var dataMetadata = metadata(command.data());
+        var title = "title=" + command.title();
+        var body = "body=" + command.body();
+        return dataMetadata == null ? title + ";" + body : title + ";" + body + ";" + dataMetadata;
     }
 
     private String metadata(Map<String, String> data) {
