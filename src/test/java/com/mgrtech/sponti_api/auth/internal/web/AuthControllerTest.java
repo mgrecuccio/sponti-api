@@ -7,15 +7,18 @@ import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
+import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -188,6 +191,29 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refresh_returns_unauthorized_when_refresh_token_is_invalid() throws Exception {
+        var request = new AuthController.RefreshRequest("invalid-refresh-token");
+
+        given(authFacade.refresh(request.refreshToken()))
+                .willThrow(new InvalidRefreshTokenException("Invalid refresh token"));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Invalid refresh token"));
+    }
+
+    @Test
+    void logout_revokes_tokens_for_authenticated_user() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isNoContent());
+
+        verify(authFacade).logout(42L);
     }
 
 }
