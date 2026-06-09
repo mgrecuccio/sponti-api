@@ -20,7 +20,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,modulith
+        include: health,info,metrics,modulith,firebase
 
 app:
   cors:
@@ -68,3 +68,11 @@ sponti:
       notification-minimum-score: 60
   notification:
     matching-suggestions-cooldown: 30m
+    push-enabled: false
+    fcm:
+      enabled: false
+      credentials-path: ${FCM_CREDENTIALS_PATH:}
+    retry:
+      enabled: true
+      fixed-delay: 5m
+      max-attempts: 3
