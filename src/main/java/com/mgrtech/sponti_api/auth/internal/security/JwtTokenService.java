@@ -37,7 +37,7 @@ public class JwtTokenService {
                 .expiration(Date.from(expiresAt))
                 .id(UUID.randomUUID().toString())
                 .claim("email", email)
-                .claim("roles", List.of(roles))
+                .claim("roles", List.copyOf(roles))
                 .claim("typ", "access")
                 .signWith(secretKey())
                 .compact();

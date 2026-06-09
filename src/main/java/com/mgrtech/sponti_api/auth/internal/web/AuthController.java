@@ -1,17 +1,20 @@
 package com.mgrtech.sponti_api.auth.internal.web;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
+import com.mgrtech.sponti_api.auth.api.AuthTokens;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.AuthTokens;
+import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -54,6 +57,24 @@ class AuthController {
         return authFacade.refresh(request.refreshToken);
     }
 
+    @PostMapping("/logout")
+    @SecurityRequirement(name = "bearerAuth")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Logout and revoke refresh tokens")
+    void logout(Authentication authentication) {
+        authFacade.logout(extractUserId(authentication));
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        var principal = authentication.getPrincipal();
+
+        if (principal instanceof String value) {
+            return Long.valueOf(value);
+        }
+
+        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
+    }
+
     @Schema(description = "Register request payload")
     record RegisterRequest(
             @Schema(example = "user@example.com") @NotBlank @Email String email,
@@ -69,6 +90,7 @@ class AuthController {
             @Schema(example = "strongPassword") @NotBlank String password) {
     }
 
+    @Schema(description = "Refresh token request payload")
     record RefreshRequest(
             @Schema(example = "opaque-refresh-token") @NotBlank String refreshToken
     ) {
