@@ -17,6 +17,12 @@ public interface NotificationHistoryRepository extends JpaRepository<Notificatio
             NotificationDeliveryStatus status
     );
 
+    boolean existsByUserIdAndTypeAndRelatedMatchId(
+            Long userId,
+            NotificationType type,
+            Long relatedMatchId
+    );
+
     List<NotificationHistoryEntity> findTop50ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
             NotificationDeliveryStatus status,
             Instant now

@@ -34,6 +34,12 @@ class NotificationApplicationServiceTest {
 
     @Test
     void recordsMatchProposalNotificationWithoutCooldown() {
+        when(repository.existsByUserIdAndTypeAndRelatedMatchId(
+                2L,
+                NotificationType.MATCH_PROPOSAL_CREATED,
+                99L
+        )).thenReturn(false);
+
         service.send(new SendNotificationCommand(
                 2L,
                 NotificationType.MATCH_PROPOSAL_CREATED,
@@ -56,6 +62,29 @@ class NotificationApplicationServiceTest {
                     assertThat(history.getRelatedMatchId()).isEqualTo(99L);
                     assertThat(history.getSentAt()).isEqualTo(NOW);
                 });
+    }
+
+    @Test
+    void doesNotRecordDuplicateMatchProposalNotificationForSameMatch() {
+        when(repository.existsByUserIdAndTypeAndRelatedMatchId(
+                2L,
+                NotificationType.MATCH_PROPOSAL_CREATED,
+                99L
+        )).thenReturn(true);
+
+        service.send(new SendNotificationCommand(
+                2L,
+                NotificationType.MATCH_PROPOSAL_CREATED,
+                "You have a new match invitation",
+                "Someone is available and invited you to connect.",
+                Map.of(
+                        "matchId", "99",
+                        "initiatorUserId", "1"
+                )
+        ));
+
+        verify(repository, never()).save(any());
+        verify(dispatcher, never()).dispatch(any(), any());
     }
 
     @Test
