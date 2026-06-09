@@ -284,34 +284,6 @@ Useful commands:
 
 ---
 
-## 🔁 Matching And Notifications
-
-The matching engine uses a proposal/invitation model:
-
-1. `GET /api/v1/matches/suggestions` computes temporary suggestions.
-2. `POST /api/v1/matches` creates a stored proposal from `candidateUserId` and `channelType`.
-3. The backend recomputes score and overlap server-side before storing.
-4. Matching publishes `MatchProposalCreatedEvent`.
-5. The notification module listens and sends/logs a `MATCH_PROPOSAL_CREATED` notification.
-6. The candidate retrieves proposals with `GET /api/v1/matches/incoming`.
-7. The candidate accepts or declines.
-
-Generic suggestion notifications are also supported through a conservative scheduler:
-
-* scheduler evaluates matching-enabled users every configured interval
-* suggestions must be current or start before the next scheduler run
-* suggestions must pass a higher notification score threshold
-* notification history prevents repeated noisy notifications
-
-Push payloads are treated as signals only. Clients should refresh backend endpoints after receiving a notification.
-
-Detailed docs:
-
-* [`docs/4_matching_engine.txt`](docs/4_matching_engine.txt)
-* [`docs/9_notification_module.txt`](docs/5_notification_module.txt)
-
----
-
 ## 📌 Roadmap
 
 ### Phase 1 — Foundation ✅
@@ -352,7 +324,7 @@ Detailed docs:
 
 ---
 
-### Phase 5 — Matching Engine
+### Phase 5 — Matching Engine ✅
 
 * [x] Mutual availability detection
 * [x] Scoring logic
@@ -366,7 +338,7 @@ Detailed docs:
 
 ---
 
-### Phase 6 — Notifications
+### Phase 6 — Notifications ✅
 
 * [x] Event-driven integration
 * [x] Matching notification listener
@@ -374,9 +346,9 @@ Detailed docs:
 * [x] Notification history table
 * [x] Cooldown and deduplication for generic suggestions
 * [x] Placeholder/log delivery
-* [ ] Real FCM/APNs push delivery
-* [ ] Device token management
-* [ ] Delivery status and retry handling
+* [x] Real FCM/APNs push delivery
+* [x] Device token management
+* [x] Delivery status and retry handling
 
 ---
 
