@@ -5,8 +5,10 @@ import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
+import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,9 @@ class AuthApplicationServiceIntegrationTest {
 
     @Autowired
     DatabaseCleaner databaseCleaner;
+
+    @Autowired
+    JwtTokenService jwtTokenService;
 
     @BeforeEach
     void cleanDatabase() {
@@ -117,5 +122,23 @@ class AuthApplicationServiceIntegrationTest {
         assertThat(refreshed.expiresInSeconds()).isPositive();
 
         assertThat(refreshed.refreshToken()).isNotEqualTo(registered.refreshToken());
+    }
+
+    @Test
+    void logout_revokes_all_user_refresh_tokens() {
+        var registered = authFacade.register(
+                new RegisterCommand("john@example.com", "password", "John", "UTC")
+        );
+        var loggedIn = authFacade.login(
+                new LoginCommand("john@example.com", "password")
+        );
+        var userId = jwtTokenService.extractUserId(registered.accessToken());
+
+        authFacade.logout(userId);
+
+        assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+        assertThatThrownBy(() -> authFacade.refresh(loggedIn.refreshToken()))
+                .isInstanceOf(InvalidRefreshTokenException.class);
     }
 }

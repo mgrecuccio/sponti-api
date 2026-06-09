@@ -139,6 +139,16 @@ class AuthApplicationService implements AuthFacade {
         );
     }
 
+    @Override
+    public void logout(Long userId) {
+        log.info("Logout - Revoke all token for userId={} requested", userId);
+
+        var user = userCredentialsQuery.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Impossible to revoke tokens: user does not exist."));
+
+        refreshTokenService.revokeAllForUser(user.id());
+    }
+
     private String maskEmail(String email) {
         if (email == null || email.isBlank()) {
             return "na";

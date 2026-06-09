@@ -3,6 +3,9 @@ package com.mgrtech.sponti_api.auth.internal.application;
 import com.mgrtech.sponti_api.auth.internal.domain.RefreshToken;
 import com.mgrtech.sponti_api.auth.internal.repository.RefreshTokenRepository;
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
+import com.mgrtech.sponti_api.shared.error.ExpiredRefreshTokenException;
+import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
+import com.mgrtech.sponti_api.shared.error.RevokedRefreshTokenException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +47,14 @@ public class RefreshTokenService {
         var now = Instant.now();
 
         var existing = repository.findByTokenHash(hash)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
 
-        if(!existing.isActive(now)) {
-            throw new RuntimeException("Refresh Token expired or revoked");
+        if (existing.isRevoked()) {
+            throw new RevokedRefreshTokenException("Refresh token has been revoked");
+        }
+
+        if (existing.isExpired(now)) {
+            throw new ExpiredRefreshTokenException("Refresh token has expired");
         }
 
         var newRaw = generate();
