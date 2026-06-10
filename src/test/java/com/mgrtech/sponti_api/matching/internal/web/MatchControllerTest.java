@@ -7,6 +7,7 @@ import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.matching.internal.application.MatchingFacade;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
+import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -182,5 +183,16 @@ public class MatchControllerTest {
                 .andExpect(jsonPath("$.overlapEnd").value("2026-03-30T10:00:00Z"))
                 .andExpect(jsonPath("$.createdAt").value("2026-03-30T08:00:00Z"))
                 .andExpect(jsonPath("$.respondedAt").value("2026-03-30T09:30:00Z"));
+    }
+
+    @Test
+    void accept_match_returns_conflict_when_match_is_expired() throws Exception {
+        given(matchingFacade.acceptMatch(42L, 99L))
+                .willThrow(new MatchProposalExpiredException("Match proposal has expired"));
+
+        mockMvc.perform(patch("/api/v1/matches/{id}/accept", 99L)
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Match proposal has expired"));
     }
 }

@@ -125,10 +125,12 @@ public class MatchSuggestionsService implements MatchingFacade {
     @Transactional
     public MatchView acceptMatch(Long candidateUserId, Long proposalId) {
         log.info("Candidate user id = {} is accepting the proposal id ={}", candidateUserId, proposalId);
+        var now = Instant.now(clock);
         var proposal = repository.findByIdAndCandidateUserId(proposalId, candidateUserId)
                 .orElseThrow(
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
+        ensureNotExpired(proposal, now);
         proposal.acceptBy(candidateUserId);
         log.info("Proposal id = {} accepted by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
@@ -138,10 +140,12 @@ public class MatchSuggestionsService implements MatchingFacade {
     @Transactional
     public MatchView declineMatch(Long candidateUserId, Long proposalId) {
         log.info("Candidate user id = {} is declining the proposal id ={}", candidateUserId, proposalId);
+        var now = Instant.now(clock);
         var proposal = repository.findByIdAndCandidateUserId(proposalId, candidateUserId)
                 .orElseThrow(
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
+        ensureNotExpired(proposal, now);
         proposal.declineBy(candidateUserId);
         log.info("Proposal id = {} declined by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
@@ -363,6 +367,13 @@ public class MatchSuggestionsService implements MatchingFacade {
                 userId,
                 MatchProposalStatus.PROPOSED
         );
+    }
+
+    private void ensureNotExpired(MatchProposalEntity proposal, Instant now) {
+        var expiresAt = proposal.getExpiresAt();
+        if (expiresAt != null && !expiresAt.isAfter(now)) {
+            throw new MatchProposalExpiredException("Match proposal has expired");
+        }
     }
 
     private boolean isChannelAllowed(ChannelType channelType, UserMatchingPreferencesView preferences) {
