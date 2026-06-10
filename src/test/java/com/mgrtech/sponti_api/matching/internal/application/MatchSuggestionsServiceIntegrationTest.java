@@ -20,6 +20,7 @@ import com.mgrtech.sponti_api.matching.internal.exception.AvailabilityOverlapNot
 import com.mgrtech.sponti_api.matching.internal.exception.ChannelNotAllowedException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchAlreadyExistsException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException;
+import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
@@ -345,6 +346,28 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
+    void accept_match_fails_when_match_is_expired() {
+        var initiator = createUser("accept-expired-initiator", "Accept Expired Initiator");
+        var candidate = createUser("accept-expired-candidate", "Accept Expired Candidate");
+        var suggestion = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z"),
+                Instant.parse("2026-03-30T08:59:59Z")
+        ));
+
+        assertThatThrownBy(() -> matchingFacade.acceptMatch(candidate.id(), suggestion.getId()))
+                .isInstanceOf(MatchProposalExpiredException.class)
+                .hasMessage("Match proposal has expired");
+
+        assertThat(matchProposalRepository.findById(suggestion.getId()))
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
+    }
+
+    @Test
     void decline_match_marks_proposed_match_as_declined() {
         var initiator = createUser("decline-match-initiator", "Decline Match Initiator");
         var candidate = createUser("decline-match-candidate", "Decline Match Candidate");
@@ -387,6 +410,28 @@ public class MatchSuggestionsServiceIntegrationTest {
 
         assertThatThrownBy(() -> matchingFacade.declineMatch(other.id(), suggestion.getId()))
                 .isInstanceOf(MatchNotFoundException.class);
+
+        assertThat(matchProposalRepository.findById(suggestion.getId()))
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
+    }
+
+    @Test
+    void decline_match_fails_when_match_is_expired() {
+        var initiator = createUser("decline-expired-initiator", "Decline Expired Initiator");
+        var candidate = createUser("decline-expired-candidate", "Decline Expired Candidate");
+        var suggestion = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CALL,
+                80,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T09:45:00Z"),
+                Instant.parse("2026-03-30T08:59:59Z")
+        ));
+
+        assertThatThrownBy(() -> matchingFacade.declineMatch(candidate.id(), suggestion.getId()))
+                .isInstanceOf(MatchProposalExpiredException.class)
+                .hasMessage("Match proposal has expired");
 
         assertThat(matchProposalRepository.findById(suggestion.getId()))
                 .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
