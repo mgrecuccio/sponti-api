@@ -14,6 +14,7 @@ import com.mgrtech.sponti_api.matching.internal.exception.AvailabilityOverlapNot
 import com.mgrtech.sponti_api.matching.internal.exception.ChannelNotAllowedException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchAlreadyExistsException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException;
+import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
@@ -160,6 +161,27 @@ class MatchSuggestionsServiceTest {
     }
 
     @Test
+    void acceptMatchThrowsWhenSuggestionIsExpired() {
+        var suggestion = persistedSuggestion(new MatchProposalEntity(
+                USER_ID,
+                CANDIDATE_ID,
+                ChannelType.CHAT,
+                90,
+                NOW.minus(Duration.ofMinutes(60)),
+                NOW.plus(Duration.ofMinutes(60)),
+                NOW
+        ));
+        when(repository.findByIdAndCandidateUserId(10L, CANDIDATE_ID))
+                .thenReturn(Optional.of(suggestion));
+
+        assertThatThrownBy(() -> service.acceptMatch(CANDIDATE_ID, 10L))
+                .isInstanceOf(MatchProposalExpiredException.class)
+                .hasMessage("Match proposal has expired");
+
+        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+    }
+
+    @Test
     void declineMatchMarksCandidateIncomingSuggestionAsDeclined() {
         var suggestion = persistedSuggestion(new MatchProposalEntity(
                 USER_ID,
@@ -191,6 +213,27 @@ class MatchSuggestionsServiceTest {
 
         assertThatThrownBy(() -> service.declineMatch(CANDIDATE_ID, 10L))
                 .isInstanceOf(MatchNotFoundException.class);
+    }
+
+    @Test
+    void declineMatchThrowsWhenSuggestionIsExpired() {
+        var suggestion = persistedSuggestion(new MatchProposalEntity(
+                USER_ID,
+                CANDIDATE_ID,
+                ChannelType.CALL,
+                75,
+                NOW.minus(Duration.ofMinutes(60)),
+                NOW.plus(Duration.ofMinutes(45)),
+                NOW.minus(Duration.ofSeconds(1))
+        ));
+        when(repository.findByIdAndCandidateUserId(10L, CANDIDATE_ID))
+                .thenReturn(Optional.of(suggestion));
+
+        assertThatThrownBy(() -> service.declineMatch(CANDIDATE_ID, 10L))
+                .isInstanceOf(MatchProposalExpiredException.class)
+                .hasMessage("Match proposal has expired");
+
+        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
     }
 
     @Test
