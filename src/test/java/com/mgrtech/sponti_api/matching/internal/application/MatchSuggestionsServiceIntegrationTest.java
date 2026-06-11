@@ -4,28 +4,24 @@ import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FixedClockTestConfiguration;
 import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
-import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
+import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.api.MatchingQuery;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalEntity;
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalStatus;
-import com.mgrtech.sponti_api.matching.internal.exception.AcceptedContactNotFoundException;
-import com.mgrtech.sponti_api.matching.internal.exception.AvailabilityOverlapNotFoundException;
-import com.mgrtech.sponti_api.matching.internal.exception.ChannelNotAllowedException;
-import com.mgrtech.sponti_api.matching.internal.exception.MatchAlreadyExistsException;
-import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException;
-import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
+import com.mgrtech.sponti_api.matching.internal.exception.*;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
+import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.view.CreatedUserView;
-import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -478,13 +474,33 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
+    void match_proposal_creation_fails_if_same_pair_already_exists() {
+        var candidate = createUser("incoming-candidate", "Incoming Candidate");
+        var initiator = createUser("incoming-initiator", "Incoming Initiator");
+        createChatAvailability(candidate.id(), LocalTime.of(11, 0));
+        createChatAvailability(initiator.id(), LocalTime.of(11, 0));
+        createAcceptedContact(initiator.id(), candidate, true);
+
+        var proposal1 = matchingFacade.createMatch(initiator.id(), new CreateMatchCommand(candidate.id(), ChannelType.CHAT));
+
+        assertThat(matchProposalRepository.findById(proposal1.id()).isPresent()).isTrue();
+        assertThat(matchProposalRepository.findById(proposal1.id()).get().getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+
+        assertThatThrownBy(() -> matchingFacade.createMatch(
+                candidate.id(), new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
+        )).isInstanceOf(MatchAlreadyExistsException.class)
+          .hasMessage("A proposed match already exists for this pair.");
+    }
+
+    @Test
     void get_incoming_matches_returns_only_active_proposed_matches_for_candidate() {
         var candidate = createUser("incoming-candidate", "Incoming Candidate");
+        var candidate2 = createUser("incoming-candidate2", "Incoming Candidate2");
         var initiator = createUser("incoming-initiator", "Incoming Initiator");
         var otherInitiator = createUser("incoming-other-initiator", "Incoming Other Initiator");
         var outgoingCandidate = createUser("incoming-outgoing-candidate", "Incoming Outgoing Candidate");
 
-        var incoming = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+       var incoming = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
                 initiator.id(),
                 candidate.id(),
                 ChannelType.CHAT,
@@ -510,19 +526,19 @@ public class MatchSuggestionsServiceIntegrationTest {
         ));
         var accepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
                 initiator.id(),
-                candidate.id(),
+                candidate2.id(),
                 ChannelType.CHAT,
                 60,
                 Instant.parse("2026-03-30T09:00:00Z"),
                 Instant.parse("2026-03-30T10:00:00Z")
         ));
-        accepted.acceptBy(candidate.id());
+        accepted.acceptBy(candidate2.id());
         matchProposalRepository.saveAndFlush(accepted);
 
         var invitations = matchingFacade.getIncomingMatches(candidate.id());
 
         assertThat(invitations)
-                .extracting(match -> match.id())
+                .extracting(MatchInvitationView::id)
                 .containsExactlyInAnyOrder(secondIncoming.getId(), incoming.getId());
         assertThat(invitations)
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name()));
