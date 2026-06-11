@@ -193,6 +193,7 @@ public class MatchControllerTest {
         mockMvc.perform(patch("/api/v1/matches/{id}/accept", 99L)
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MATCH_PROPOSAL_EXPIRED"))
                 .andExpect(jsonPath("$.detail").value("Match proposal has expired"));
     }
 }
