@@ -21,6 +21,7 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,8 @@ import java.time.*;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+
+import static com.mgrtech.sponti_api.matching.api.MatchView.toMatchView;
 
 @Service
 @AllArgsConstructor
@@ -99,26 +102,21 @@ public class MatchSuggestionsService implements MatchingFacade {
             throw new MatchScoreBelowThresholdException("Candidate score is below minimum threshold.");
         }
 
-        var entity = repository.save(new MatchProposalEntity(
-                userId,
-                candidateUserId,
-                requestedChannel,
-                scored.score(),
-                overlap.start(),
-                overlap.end(),
-                expiresAt(now, overlap.end())
-        ));
+        try {
+            var proposal = createProposal(
+                    userId,
+                    candidateUserId,
+                    requestedChannel,
+                    scored,
+                    overlap,
+                    now
+            );
 
-        eventPublisher.publishEvent(new MatchProposalCreatedEvent(
-                entity.getId(),
-                entity.getInitiatorUserId(),
-                entity.getCandidateUserId(),
-                entity.getChannelType(),
-                entity.getOverlapStart(),
-                entity.getOverlapEnd()
-        ));
-
-        return toMatchView(entity);
+            eventPublisher.publishEvent(MatchProposalCreatedEvent.from(proposal));
+            return toMatchView(proposal);
+        } catch (DataIntegrityViolationException e) {
+            throw new MatchAlreadyExistsException("A proposed match already exists for this pair.");
+        }
     }
 
     @Override
@@ -182,8 +180,27 @@ public class MatchSuggestionsService implements MatchingFacade {
         log.info("Incoming match invitations requested for userId={}", userId);
         return repository.findActiveIncoming(userId, MatchProposalStatus.PROPOSED, Instant.now(clock))
                 .stream()
-                .map(this::toMatchInvitationView)
+                .map(MatchInvitationView::toMatchInvitationView)
                 .toList();
+    }
+
+    private MatchProposalEntity createProposal(
+            Long userId,
+            Long candidateUserId,
+            ChannelType requestedChannel,
+            ScoredCandidate scored,
+            AvailabilityOverlap overlap,
+            Instant now
+    ) {
+        return repository.save(new MatchProposalEntity(
+                userId,
+                candidateUserId,
+                requestedChannel,
+                scored.score(),
+                overlap.start(),
+                overlap.end(),
+                expiresAt(now, overlap.end())
+        ));
     }
 
     private Optional<AvailabilityOverlap> findBestOverlapForChannel(
@@ -500,34 +517,5 @@ public class MatchSuggestionsService implements MatchingFacade {
             AvailabilityOverlap overlap,
             int score
     ) {
-    }
-
-    private MatchView toMatchView(MatchProposalEntity entity) {
-        return new MatchView(
-                entity.getId(),
-                entity.getCandidateUserId(),
-                entity.getChannelType(),
-                entity.getStatus().name(),
-                entity.getScore(),
-                entity.getOverlapStart(),
-                entity.getOverlapEnd(),
-                entity.getCreatedAt(),
-                entity.getRespondedAt()
-        );
-    }
-
-    private MatchInvitationView toMatchInvitationView(MatchProposalEntity entity) {
-        return new MatchInvitationView(
-                entity.getId(),
-                entity.getInitiatorUserId(),
-                null,
-                entity.getChannelType(),
-                entity.getStatus().name(),
-                entity.getScore(),
-                entity.getOverlapStart(),
-                entity.getOverlapEnd(),
-                entity.getCreatedAt(),
-                entity.getRespondedAt()
-        );
     }
 }
