@@ -1,10 +1,13 @@
 package com.mgrtech.sponti_api.auth.internal.security;
 
+import com.mgrtech.sponti_api.shared.error.ApiErrorCode;
+import com.mgrtech.sponti_api.shared.error.ApiErrors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -72,10 +75,13 @@ public class SecurityConfig {
     AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType("application/json");
-            response.getWriter().write("""
-                    {"error":"unauthorized","message":"Authentication required"}
-                    """);
+            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            response.getWriter().write(ApiErrors.problemJson(
+                    HttpStatus.UNAUTHORIZED,
+                    ApiErrorCode.AUTHENTICATION_REQUIRED,
+                    "Authentication required",
+                    request.getRequestURI()
+            ));
         };
     }
 

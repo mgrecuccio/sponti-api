@@ -94,7 +94,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
@@ -153,7 +154,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"));
     }
 
     @Test
@@ -204,6 +206,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
                 .andExpect(jsonPath("$.detail").value("Invalid refresh token"));
     }
 
