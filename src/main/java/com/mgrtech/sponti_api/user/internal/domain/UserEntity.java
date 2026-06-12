@@ -1,5 +1,9 @@
 package com.mgrtech.sponti_api.user.internal.domain;
 
+import com.mgrtech.sponti_api.user.api.view.UserCredentialsView;
+import com.mgrtech.sponti_api.user.api.view.UserLookupView;
+import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -70,7 +74,41 @@ public class UserEntity {
         return status.name();
     }
 
-    public void updateTimezone(String timezone) {
+    public void update(String displayName, String timezone) {
+        this.displayName = displayName;
         this.timezone = timezone;
+    }
+
+    public static UserCredentialsView toCredentialsView(UserEntity user) {
+        return new UserCredentialsView(
+                user.getId(),
+                user.getEmail(),
+                user.getPasswordHash()
+        );
+    }
+
+    public static UserProfileView toProfileView(UserEntity user) {
+        return new UserProfileView(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getStatusAsString(),
+                user.getTimezone()
+        );
+    }
+
+    public static UserLookupView toLookupView(UserEntity user) {
+        return new UserLookupView(user.getId(), user.getEmail());
+    }
+
+    public static UserMatchingPreferencesView defaultMatchingPreferencesView(UserEntity user) {
+        return new UserMatchingPreferencesView(
+                user.getId(),
+                user.getTimezone(),
+                true,
+                true,
+                null,
+                null
+        );
     }
 }

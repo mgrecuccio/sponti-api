@@ -1,8 +1,10 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
@@ -26,11 +28,18 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
+import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
 
 @Service
 @AllArgsConstructor
-public class UserApplicationService implements UserRegistrationFacade, UserCredentialsQuery, UserProfileQuery, UserLookupQuery, UserMatchingPreferencesQuery {
-
+public class UserApplicationService implements
+        UserFacade,
+        UserRegistrationFacade,
+        UserCredentialsQuery,
+        UserProfileQuery,
+        UserLookupQuery,
+        UserMatchingPreferencesQuery
+{
     private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
 
     private final UserRepository userRepository;
@@ -40,28 +49,28 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
     @Transactional(readOnly = true)
     public Optional<UserCredentialsView> findByEmail(String email) {
         return userRepository.findByEmail(normalizeEmail(email))
-                .map(this::toCredentialsView);
+                .map(UserEntity::toCredentialsView);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<UserCredentialsView> findById(Long id) {
         return userRepository.findById(id)
-                .map(this::toCredentialsView);
+                .map(UserEntity::toCredentialsView);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<UserProfileView> getProfileById(Long userId) {
         return userRepository.findById(userId)
-                .map(this::toProfileView);
+                .map(UserEntity::toProfileView);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<UserLookupView> findByEmailForLookup(String email) {
         return userRepository.findByEmail(email)
-                .map(this::toLookupView);
+                .map(UserEntity::toLookupView);
     }
 
     @Override
@@ -109,26 +118,17 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
         );
     }
 
-    private UserCredentialsView toCredentialsView(UserEntity user) {
-        return new UserCredentialsView(
-                user.getId(),
-                user.getEmail(),
-                user.getPasswordHash()
-        );
-    }
+    @Override
+    @Transactional
+    public UserProfileView update(Long userId, UpdateUserCommand command) {
+        log.info("Updating userId={}", userId);
 
-    private UserProfileView toProfileView(UserEntity user) {
-        return new UserProfileView(
-                user.getId(),
-                user.getEmail(),
-                user.getDisplayName(),
-                user.getStatusAsString(),
-                user.getTimezone()
-        );
-    }
+        var user = userRepository.findById(userId)
+                        .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
 
-    private UserLookupView toLookupView(UserEntity user) {
-        return new UserLookupView(user.getId(), user.getEmail());
+        user.update(command.displayName(), command.timezone());
+        log.info("UserId={} updated.", userId);
+        return UserEntity.toProfileView(user);
     }
 
     private UserMatchingPreferencesView toMatchingPreferencesView(UserEntity user, UserPreferenceEntity preferences) {
@@ -139,17 +139,6 @@ public class UserApplicationService implements UserRegistrationFacade, UserCrede
                 preferences.isAllowCall(),
                 preferences.getQuietHoursStart(),
                 preferences.getQuietHoursEnd()
-        );
-    }
-
-    private UserMatchingPreferencesView defaultMatchingPreferencesView(UserEntity user) {
-        return new UserMatchingPreferencesView(
-                user.getId(),
-                user.getTimezone(),
-                true,
-                true,
-                null,
-                null
         );
     }
 }

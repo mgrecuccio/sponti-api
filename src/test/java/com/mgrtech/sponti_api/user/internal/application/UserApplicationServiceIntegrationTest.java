@@ -3,7 +3,9 @@ package com.mgrtech.sponti_api.user.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
@@ -35,6 +37,9 @@ class UserApplicationServiceIntegrationTest {
 
     @Autowired
     DatabaseCleaner databaseCleaner;
+
+    @Autowired
+    UserFacade userFacade;
 
     @BeforeEach
     void cleanDatabase() {
@@ -109,7 +114,7 @@ class UserApplicationServiceIntegrationTest {
     }
 
     @Test
-    void get__default_matching_user_preferences() {
+    void get_default_matching_user_preferences() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "john@example.com",
@@ -128,5 +133,31 @@ class UserApplicationServiceIntegrationTest {
         assertThat(preferences.get().matchingEnabled()).isTrue();
         assertThat(preferences.get().quietHoursStart()).isNull();
         assertThat(preferences.get().quietHoursEnd()).isNull();
+    }
+
+    @Test
+    void update_user_profile() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        var updated = userFacade.update(created.id(),
+                new UpdateUserCommand("new-display-name", "Europe/Brussels"));
+
+        assertThat(updated.displayName()).isEqualTo("new-display-name");
+        assertThat(updated.timezone()).isEqualTo("Europe/Brussels");
+    }
+
+    @Test
+    void update_user_profile_fails_if_user_not_found() {
+        assertThatThrownBy(() -> userFacade.update(11L,
+                new UpdateUserCommand("new-display-name", "Europe/Brussels")))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessage("Impossible to update the profile: user not found.");
     }
 }
