@@ -7,6 +7,7 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +35,7 @@ class ContactController {
     }
 
     @GetMapping
+    @Operation(summary = "List accepted contacts", description = "Mobile contacts screen. Returns contacts accepted by the authenticated user.")
     public List<ContactView> getContacts(Authentication authentication) {
         var ownerUserId = extractUserId(authentication);
         return contactFacade.getAcceptedContacts(ownerUserId);
@@ -41,6 +43,7 @@ class ContactController {
 
     @PostMapping("/invitations")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Send contact invitation", description = "Invite a user by email. Conflict responses use CONTACT_INVITATION_ALREADY_EXISTS, CONTACT_ALREADY_EXISTS, or CONTACT_BLOCKED.")
     public ContactInvitationView sendInvitation(
             Authentication authentication,
             @Valid @RequestBody SendContactInvitationRequest request
@@ -55,6 +58,7 @@ class ContactController {
 
     @DeleteMapping("/invitations/{invitationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Cancel sent invitation", description = "Sender cancels a pending invitation they created. Missing or non-pending invitations return CONTACT_INVITATION_NOT_FOUND.")
     public void cancelInvitation(
             Authentication authentication,
             @PathVariable Long invitationId
@@ -65,6 +69,7 @@ class ContactController {
 
     @PostMapping("/invitations/{invitationId}/accept")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Accept incoming invitation", description = "Recipient accepts a pending incoming contact invitation and creates accepted contact relationships.")
     public void acceptInvitation(
             Authentication authentication,
             @PathVariable Long invitationId
@@ -75,6 +80,7 @@ class ContactController {
 
     @PostMapping("/invitations/{invitationId}/reject")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Reject incoming invitation", description = "Recipient rejects a pending incoming contact invitation. No contact relationship is created.")
     public void rejectInvitation(
             Authentication authentication,
             @PathVariable Long invitationId
@@ -85,6 +91,7 @@ class ContactController {
 
     @PostMapping("/{contactUserId}/block")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Block contact", description = "Authenticated user blocks another user/contact.")
     public void blockContact(
             Authentication authentication,
             @PathVariable Long contactUserId
@@ -95,6 +102,7 @@ class ContactController {
 
     @DeleteMapping("/{contactUserId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove contact", description = "Authenticated user removes a contact from their accepted contacts list.")
     public void removeContact(
             Authentication authentication,
             @PathVariable Long contactUserId
@@ -104,6 +112,7 @@ class ContactController {
     }
 
     @PutMapping("/{contactUserId}")
+    @Operation(summary = "Edit contact", description = "Update the authenticated user's nickname and favorite flag for a contact.")
     public ContactView editContact(
             Authentication authentication,
             @PathVariable Long contactUserId,
@@ -118,6 +127,7 @@ class ContactController {
     }
 
     @GetMapping("/invitations/pending")
+    @Operation(summary = "List pending incoming invitations", description = "Mobile pending invitations screen. Returns only pending invitations addressed to the authenticated user.")
     public List<PendingContactInvitationView> getPendingInvitations(Authentication authentication) {
         var recipientUserId = extractUserId(authentication);
         return contactFacade.getPendingIncomingInvitations(recipientUserId);

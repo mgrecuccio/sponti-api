@@ -7,6 +7,7 @@ import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,12 +32,14 @@ class MatchController {
     }
 
     @GetMapping("/suggestions")
+    @Operation(summary = "List match suggestions", description = "Mobile suggestions screen. Returns ranked currently available contacts for the authenticated user.")
     public List<SuggestedMatchView> suggest(Authentication authentication) {
         var userId = extractUserId(authentication);
         return matchingFacade.getSuggestions(userId);
     }
 
     @GetMapping("/incoming")
+    @Operation(summary = "List incoming match invitations", description = "Mobile incoming matches screen. Returns active match proposals where the authenticated user is the candidate.")
     public List<MatchInvitationView> incoming(Authentication authentication) {
         var userId = extractUserId(authentication);
         return matchingFacade.getIncomingMatches(userId);
@@ -44,6 +47,7 @@ class MatchController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create match proposal", description = "Create a match proposal for an accepted contact and communication channel.")
     public MatchView createMatch(
             Authentication authentication,
             @Valid @RequestBody CreateMatchRequest request
@@ -55,6 +59,7 @@ class MatchController {
 
     @PatchMapping("/{id}/accept")
     @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Accept match proposal", description = "Candidate accepts an incoming match proposal.")
     public MatchView acceptMatch(Authentication authentication, @PathVariable("id") Long proposalId) {
         var candidateUserId = extractUserId(authentication);
         return matchingFacade.acceptMatch(candidateUserId, proposalId);
@@ -62,6 +67,7 @@ class MatchController {
 
     @PatchMapping("/{id}/decline")
     @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Decline match proposal", description = "Candidate declines an incoming match proposal.")
     public MatchView declineMatch(Authentication authentication, @PathVariable("id") Long proposalId) {
         var candidateUserId = extractUserId(authentication);
         return matchingFacade.declineMatch(candidateUserId, proposalId);
