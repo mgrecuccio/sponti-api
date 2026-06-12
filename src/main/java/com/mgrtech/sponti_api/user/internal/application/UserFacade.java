@@ -5,5 +5,5 @@ import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 
 public interface UserFacade {
 
-    UserProfileView update(Long userId, UpdateUserCommand command);
+    UserProfileView updateProfile(Long userId, UpdateUserCommand command);
 }

@@ -4,18 +4,23 @@ import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
+import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
-import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static org.assertj.core.api.Assertions.*;
+import java.time.LocalTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ModuleIntegrationTest
 class UserApplicationServiceIntegrationTest {
@@ -40,6 +45,9 @@ class UserApplicationServiceIntegrationTest {
 
     @Autowired
     UserFacade userFacade;
+
+    @Autowired
+    UserPreferenceFacade userPreferenceFacade;
 
     @BeforeEach
     void cleanDatabase() {
@@ -146,18 +154,94 @@ class UserApplicationServiceIntegrationTest {
                 )
         );
 
-        var updated = userFacade.update(created.id(),
+        userFacade.updateProfile(created.id(),
                 new UpdateUserCommand("new-display-name", "Europe/Brussels"));
 
-        assertThat(updated.displayName()).isEqualTo("new-display-name");
-        assertThat(updated.timezone()).isEqualTo("Europe/Brussels");
+        var updated = userProfileQuery.getProfileById(created.id());
+
+        assertThat(updated.isPresent()).isTrue();
+        assertThat(updated.get().displayName()).isEqualTo("new-display-name");
+        assertThat(updated.get().timezone()).isEqualTo("Europe/Brussels");
     }
 
     @Test
     void update_user_profile_fails_if_user_not_found() {
-        assertThatThrownBy(() -> userFacade.update(11L,
+        assertThatThrownBy(() -> userFacade.updateProfile(11L,
                 new UpdateUserCommand("new-display-name", "Europe/Brussels")))
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("Impossible to update the profile: user not found.");
+    }
+
+    @Test
+    void update_user_preferences() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        var preferences = userPreferenceRepository.findByUserId(created.id());
+        assertThat(preferences.isPresent()).isTrue();
+        assertThat(preferences.get().isAllowChat()).isTrue();
+        assertThat(preferences.get().isAllowCall()).isTrue();
+        assertThat(preferences.get().getQuietHoursStart()).isNull();
+        assertThat(preferences.get().getQuietHoursEnd()).isNull();
+
+        userPreferenceFacade.updatePreferences(
+                created.id(),
+                new UpdatePreferencesCommand(
+                        false,
+                        false,
+                        LocalTime.parse("09:00:00"),
+                        LocalTime.parse("11:00:00")
+                ));
+
+        var updatedPreferences = userPreferenceRepository.findByUserId(created.id());
+
+        assertThat(updatedPreferences.isPresent()).isTrue();
+        assertThat(updatedPreferences.get().isAllowChat()).isFalse();
+        assertThat(updatedPreferences.get().isAllowCall()).isFalse();
+        assertThat(updatedPreferences.get().getQuietHoursStart()).isEqualTo(LocalTime.parse("09:00:00"));
+        assertThat(updatedPreferences.get().getQuietHoursEnd()).isEqualTo(LocalTime.parse("11:00:00"));
+    }
+
+    @Test
+    void update_user_preferences_fails_if_user_not_found() {
+        assertThatThrownBy(() -> userPreferenceFacade.updatePreferences(11L,
+                new UpdatePreferencesCommand(
+                        true,
+                        true,
+                        LocalTime.parse("09:00:00"),
+                        LocalTime.parse("11:00:00")
+                )))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessage("Impossible to update the preferences: user not found.");
+    }
+
+    @Test
+    void update_user_preferences_fails_if_preferences_not_found() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+        userPreferenceRepository.deleteAll();
+
+        assertThatThrownBy(() -> userPreferenceFacade.updatePreferences(
+                created.id(),
+                new UpdatePreferencesCommand(
+                        true,
+                        true,
+                        LocalTime.parse("09:00:00"),
+                        LocalTime.parse("11:00:00")
+                )))
+                .isInstanceOf(UserPreferencesNotFoundException.class)
+                .hasMessage("No user preferences found.");
     }
 }
