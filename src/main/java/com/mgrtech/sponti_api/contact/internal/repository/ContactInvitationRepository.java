@@ -11,6 +11,12 @@ public interface ContactInvitationRepository extends JpaRepository<ContactInvita
 
     Optional<ContactInvitationEntity> findByIdAndRecipientUserId(Long id, Long recipientUserId);
 
+    Optional<ContactInvitationEntity> findByIdAndSenderUserIdAndStatus(
+            Long id,
+            Long senderUserId,
+            InvitationStatus status
+    );
+
     boolean existsBySenderUserIdAndRecipientUserIdAndStatus(
             Long senderUserId,
             Long recipientUserId,

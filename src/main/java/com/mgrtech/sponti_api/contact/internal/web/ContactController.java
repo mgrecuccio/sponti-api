@@ -5,7 +5,7 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -51,6 +51,16 @@ class ContactController {
                 senderUserId,
                 new SendContactInvitationCommand(request.email(), request.nickName())
         );
+    }
+
+    @DeleteMapping("/invitations/{invitationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelInvitation(
+            Authentication authentication,
+            @PathVariable Long invitationId
+    ) {
+        var senderUserId = extractUserId(authentication);
+        contactFacade.cancelInvitation(senderUserId, invitationId);
     }
 
     @PostMapping("/invitations/{invitationId}/accept")
