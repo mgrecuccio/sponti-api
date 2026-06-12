@@ -295,6 +295,112 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
+    void reject_invitation_marks_pending_invitation_as_rejected_and_allows_resend() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+
+        contactFacade.rejectInvitation(recipient.id(), invitation.id());
+
+        assertThat(contactFacade.getPendingIncomingInvitations(recipient.id())).isEmpty();
+        assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
+        assertThat(contactFacade.getAcceptedContacts(recipient.id())).isEmpty();
+
+        var resentInvitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate again")
+        );
+
+        assertThat(resentInvitation.id()).isNotEqualTo(invitation.id());
+        assertThat(resentInvitation.status()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void reject_invitation_throws_when_invitation_does_not_belong_to_recipient() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-owner@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-owner-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+        var stranger = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-stranger@example.com",
+                        "hash",
+                        "Stranger",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+
+        assertThatThrownBy(() -> contactFacade.rejectInvitation(stranger.id(), invitation.id()))
+                .isInstanceOf(ContactInvitationNotFoundException.class);
+        assertThatThrownBy(() -> contactFacade.rejectInvitation(sender.id(), invitation.id()))
+                .isInstanceOf(ContactInvitationNotFoundException.class);
+    }
+
+    @Test
+    void reject_invitation_throws_when_invitation_is_not_pending() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-accepted-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "reject-accepted-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+        contactFacade.acceptInvitation(recipient.id(), invitation.id());
+
+        assertThatThrownBy(() -> contactFacade.rejectInvitation(recipient.id(), invitation.id()))
+                .isInstanceOf(ContactInvitationNotFoundException.class);
+    }
+
+    @Test
     void send_invitation_throws_when_contact_is_already_accepted() {
         var sender = userRegistrationFacade.createUser(
                 new CreateUserCommand(
