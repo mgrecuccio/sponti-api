@@ -10,6 +10,7 @@ import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +40,7 @@ class AvailabilityController {
     }
 
     @GetMapping("/rules")
+    @Operation(summary = "List availability rules", description = "Mobile availability settings screen.")
     public List<AvailabilityRuleView> getRules(Authentication authentication) {
         var userId = extractUserId(authentication);
         return availabilityFacade.getRules(userId);
@@ -46,6 +48,7 @@ class AvailabilityController {
 
     @PostMapping("/rules")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create availability rule", description = "Create a recurring availability rule for the authenticated user.")
     public AvailabilityRuleView createRule(
             Authentication authentication,
             @Valid @RequestBody CreateAvailabilityRuleRequest request
@@ -64,6 +67,7 @@ class AvailabilityController {
     }
 
     @PutMapping("/rules/{id}")
+    @Operation(summary = "Update availability rule", description = "Update a recurring availability rule owned by the authenticated user.")
     public AvailabilityRuleView updateRule(
             Authentication authentication,
             @PathVariable Long id,
@@ -86,12 +90,14 @@ class AvailabilityController {
 
     @DeleteMapping("/rules/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete availability rule", description = "Delete a recurring availability rule owned by the authenticated user.")
     public void deleteRule(Authentication authentication, @PathVariable Long id) {
         var userId = extractUserId(authentication);
         availabilityFacade.deleteRule(userId, id);
     }
 
     @GetMapping("/overrides")
+    @Operation(summary = "List availability overrides", description = "Mobile availability exceptions screen.")
     public List<AvailabilityOverrideView> getOverrides(
             Authentication authentication,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endsAfter
@@ -102,6 +108,7 @@ class AvailabilityController {
 
     @PostMapping("/overrides")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create availability override", description = "Create a one-off availability or unavailability override.")
     public AvailabilityOverrideView createOverride(
             Authentication authentication,
             @Valid @RequestBody CreateAvailabilityOverrideRequest request
@@ -119,6 +126,7 @@ class AvailabilityController {
     }
 
     @GetMapping("/effective")
+    @Operation(summary = "Get effective availability", description = "Returns computed availability windows for matching over a requested time range.")
     public List<EffectiveAvailabilityView> getEffectiveAvailability(
             Authentication authentication,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,

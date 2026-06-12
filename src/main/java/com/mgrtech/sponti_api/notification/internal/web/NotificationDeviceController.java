@@ -4,6 +4,7 @@ import com.mgrtech.sponti_api.notification.internal.application.DeviceTokenAppli
 import com.mgrtech.sponti_api.notification.internal.application.command.RegisterDeviceTokenCommand;
 import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +30,7 @@ class NotificationDeviceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Register notification device token", description = "Mobile app registers or refreshes the current push notification token for the authenticated user.")
     void register(
             Authentication authentication,
             @Valid @RequestBody RegisterDeviceTokenRequest request
@@ -46,6 +48,7 @@ class NotificationDeviceController {
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete notification device token", description = "Mobile app deletes the current push notification token during logout or token invalidation.")
     void delete(
             Authentication authentication,
             @Valid @RequestBody DeleteDeviceTokenRequest request
