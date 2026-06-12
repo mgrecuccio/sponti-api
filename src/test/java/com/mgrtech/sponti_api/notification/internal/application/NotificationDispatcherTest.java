@@ -13,6 +13,8 @@ import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeviceTok
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationProvider;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationDeviceTokenRepository;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -163,7 +165,8 @@ class NotificationDispatcherTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 properties,
                 tokenRepository,
-                sender
+                sender,
+                new OperationalMetrics(new SimpleMeterRegistry())
         );
     }
 

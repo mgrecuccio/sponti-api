@@ -15,6 +15,7 @@ import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalStatus;
 import com.mgrtech.sponti_api.matching.internal.exception.*;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
     private final MatchProposalRepository repository;
     private final ApplicationEventPublisher eventPublisher;
+    private final OperationalMetrics metrics;
 
     @Override
     @Transactional
@@ -113,6 +115,15 @@ public class MatchSuggestionsService implements MatchingFacade {
             );
 
             eventPublisher.publishEvent(MatchProposalCreatedEvent.from(proposal));
+            metrics.matchProposalCreated(proposal.getChannelType().name());
+            log.info(
+                    "Match proposal created: proposalId={} initiatorUserId={} candidateUserId={} channel={} score={}",
+                    proposal.getId(),
+                    proposal.getInitiatorUserId(),
+                    proposal.getCandidateUserId(),
+                    proposal.getChannelType(),
+                    proposal.getScore()
+            );
             return toMatchView(proposal);
         } catch (DataIntegrityViolationException e) {
             throw new MatchAlreadyExistsException("A proposed match already exists for this pair.");
@@ -130,6 +141,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                 );
         ensureNotExpired(proposal, now);
         proposal.acceptBy(candidateUserId);
+        metrics.matchProposalResponded("accepted");
         log.info("Proposal id = {} accepted by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
     }
@@ -145,6 +157,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                 );
         ensureNotExpired(proposal, now);
         proposal.declineBy(candidateUserId);
+        metrics.matchProposalResponded("declined");
         log.info("Proposal id = {} declined by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
     }

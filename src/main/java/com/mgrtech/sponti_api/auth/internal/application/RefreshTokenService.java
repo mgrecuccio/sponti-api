@@ -6,6 +6,9 @@ import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.shared.error.ExpiredRefreshTokenException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
 import com.mgrtech.sponti_api.shared.error.RevokedRefreshTokenException;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +23,21 @@ import java.util.List;
 @Service
 public class RefreshTokenService {
 
+    private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
+
     private final RefreshTokenRepository repository;
     private final JwtProperties properties;
+    private final OperationalMetrics metrics;
     private final SecureRandom secureRandom;
 
-    public RefreshTokenService(RefreshTokenRepository repository, JwtProperties properties) {
+    public RefreshTokenService(
+            RefreshTokenRepository repository,
+            JwtProperties properties,
+            OperationalMetrics metrics
+    ) {
         this.repository = repository;
         this.properties = properties;
+        this.metrics = metrics;
         this.secureRandom = new SecureRandom();
     }
 
@@ -47,13 +58,21 @@ public class RefreshTokenService {
         var now = Instant.now();
 
         var existing = repository.findByTokenHash(hash)
-                .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
+                .orElseThrow(() -> {
+                    metrics.refreshRotationFailure("invalid");
+                    log.warn("Refresh token rotation rejected: reason=invalid");
+                    return new InvalidRefreshTokenException("Invalid refresh token");
+                });
 
         if (existing.isRevoked()) {
+            metrics.refreshRotationFailure("revoked");
+            log.warn("Refresh token rotation rejected: reason=revoked userId={}", existing.getUserId());
             throw new RevokedRefreshTokenException("Refresh token has been revoked");
         }
 
         if (existing.isExpired(now)) {
+            metrics.refreshRotationFailure("expired");
+            log.warn("Refresh token rotation rejected: reason=expired userId={}", existing.getUserId());
             throw new ExpiredRefreshTokenException("Refresh token has expired");
         }
 

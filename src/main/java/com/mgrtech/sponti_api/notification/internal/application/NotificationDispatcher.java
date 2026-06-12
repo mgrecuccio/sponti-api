@@ -10,6 +10,7 @@ import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeviceTok
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationProvider;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationDeviceTokenRepository;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ class NotificationDispatcher {
     private final NotificationProperties properties;
     private final NotificationDeviceTokenRepository tokenRepository;
     private final PushNotificationSender sender;
+    private final OperationalMetrics metrics;
 
     @Transactional
     public void dispatch(NotificationHistoryEntity history, SendNotificationCommand command) {
@@ -45,6 +47,7 @@ class NotificationDispatcher {
 
         if (tokens.isEmpty()) {
             history.markNoDeviceToken(now);
+            metrics.notificationDeliveryFailure(command.type().name(), "no_device_token");
             log.info("Notification delivery skipped: userId={} type={} reason=no-device-token", command.userId(), command.type());
             return;
         }
@@ -73,6 +76,7 @@ class NotificationDispatcher {
 
         if (!result.success() && result.failureType() == PushFailureType.PERMANENT) {
             token.disable(Instant.now(clock));
+            log.warn("Notification device token disabled: userId={} reason=permanent-delivery-failure", token.getUserId());
         }
 
         return result;
@@ -93,10 +97,26 @@ class NotificationDispatcher {
                     now,
                     now.plus(retryDelay(history.getAttemptCount()))
             );
+            metrics.notificationDeliveryFailure(history.getType().name(), primary.failureType().name());
+            log.warn(
+                    "Notification delivery failed transiently: notificationHistoryId={} type={} failureCode={} nextRetryAt={}",
+                    history.getId(),
+                    history.getType(),
+                    primary.failureCode(),
+                    history.getNextRetryAt()
+            );
             return;
         }
 
         history.markFailed(primary.failureCode(), primary.failureReason(), now);
+        metrics.notificationDeliveryFailure(history.getType().name(), primary.failureType().name());
+        log.warn(
+                "Notification delivery failed permanently: notificationHistoryId={} type={} failureCode={} failureType={}",
+                history.getId(),
+                history.getType(),
+                primary.failureCode(),
+                primary.failureType()
+        );
     }
 
     private java.time.Duration retryDelay(int attemptCount) {
