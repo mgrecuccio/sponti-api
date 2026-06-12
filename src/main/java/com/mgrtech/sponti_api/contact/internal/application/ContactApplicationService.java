@@ -5,7 +5,7 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactInvitationEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactRelationshipEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.InvitationStatus;
@@ -107,6 +107,19 @@ class ContactApplicationService implements ContactFacade {
                 invitation.getStatusString(),
                 invitation.getCreatedAt()
         );
+    }
+
+    @Override
+    public void cancelInvitation(Long senderUserId, Long invitationId) {
+        log.info("Cancel contact invitation requested: senderUserId={} invitationId={}", senderUserId, invitationId);
+        var now = Instant.now(clock);
+
+        var invitation = contactInvitationRepository
+                .findByIdAndSenderUserIdAndStatus(invitationId, senderUserId, InvitationStatus.PENDING)
+                .orElseThrow(ContactInvitationNotFoundException::new);
+
+        invitation.cancel(now);
+        log.info("Contact invitation cancelled: invitationId={} senderUserId={}", invitationId, senderUserId);
     }
 
     @Override
