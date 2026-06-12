@@ -7,7 +7,7 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.internal.application.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -130,6 +131,15 @@ class ContactControllerTest {
         mockMvc.perform(post("/api/v1/contacts/invitations/{invitationId}/accept", "22")
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void cancel_invitation_returns_no_content() throws Exception {
+        mockMvc.perform(delete("/api/v1/contacts/invitations/{invitationId}", 22L)
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isNoContent());
+
+        verify(contactFacade).cancelInvitation(42L, 22L);
     }
 
     @Test

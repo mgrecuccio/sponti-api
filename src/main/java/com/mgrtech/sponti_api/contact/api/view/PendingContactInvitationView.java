@@ -1,4 +1,4 @@
-package com.mgrtech.sponti_api.contact.internal.application.view;
+package com.mgrtech.sponti_api.contact.api.view;
 
 import java.time.Instant;
 

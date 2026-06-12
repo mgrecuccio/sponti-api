@@ -193,6 +193,108 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
+    void cancel_invitation_marks_pending_invitation_as_cancelled_and_allows_resend() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+
+        contactFacade.cancelInvitation(sender.id(), invitation.id());
+
+        assertThat(contactFacade.getPendingIncomingInvitations(recipient.id())).isEmpty();
+
+        var resentInvitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate again")
+        );
+
+        assertThat(resentInvitation.id()).isNotEqualTo(invitation.id());
+        assertThat(resentInvitation.status()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void cancel_invitation_throws_when_invitation_does_not_belong_to_sender() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-owner@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-owner-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+        var stranger = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-stranger@example.com",
+                        "hash",
+                        "Stranger",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+
+        assertThatThrownBy(() -> contactFacade.cancelInvitation(stranger.id(), invitation.id()))
+                .isInstanceOf(ContactInvitationNotFoundException.class);
+    }
+
+    @Test
+    void cancel_invitation_throws_when_invitation_is_not_pending() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-accepted-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "cancel-accepted-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+        contactFacade.acceptInvitation(recipient.id(), invitation.id());
+
+        assertThatThrownBy(() -> contactFacade.cancelInvitation(sender.id(), invitation.id()))
+                .isInstanceOf(ContactInvitationNotFoundException.class);
+    }
+
+    @Test
     void send_invitation_throws_when_contact_is_already_accepted() {
         var sender = userRegistrationFacade.createUser(
                 new CreateUserCommand(
