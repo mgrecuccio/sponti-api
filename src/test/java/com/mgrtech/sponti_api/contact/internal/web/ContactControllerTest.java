@@ -134,6 +134,15 @@ class ContactControllerTest {
     }
 
     @Test
+    void reject_invitation_returns_no_content() throws Exception {
+        mockMvc.perform(post("/api/v1/contacts/invitations/{invitationId}/reject", 22L)
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isNoContent());
+
+        verify(contactFacade).rejectInvitation(42L, 22L);
+    }
+
+    @Test
     void cancel_invitation_returns_no_content() throws Exception {
         mockMvc.perform(delete("/api/v1/contacts/invitations/{invitationId}", 22L)
                         .principal(new TestingAuthenticationToken("42", null)))

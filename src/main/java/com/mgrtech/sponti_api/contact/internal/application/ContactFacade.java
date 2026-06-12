@@ -14,6 +14,8 @@ public interface ContactFacade extends ContactQuery {
 
     void acceptInvitation(Long recipientUserId, Long invitationId);
 
+    void rejectInvitation(Long recipientUserId, Long invitationId);
+
     void blockContact(Long ownerUserId, Long contactUserId);
 
     void removeContact(Long ownerUserId, Long contactUserId);
