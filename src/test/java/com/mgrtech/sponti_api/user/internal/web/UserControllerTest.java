@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
@@ -38,6 +39,9 @@ class UserControllerTest {
 
     @MockitoBean
     UserProfileQuery userProfileQuery;
+
+    @MockitoBean
+    UserMatchingPreferencesQuery userMatchingPreferencesQuery;
 
     @MockitoBean
     UserFacade userFacade;
@@ -131,7 +135,9 @@ class UserControllerTest {
                 true,
                 true,
                 LocalTime.parse("09:00:00"),
-                LocalTime.parse("11:00:00")
+                LocalTime.parse("11:00:00"),
+                false,
+                true
         );
 
         when(userPreferenceFacade.updatePreferences(42L,
@@ -139,7 +145,9 @@ class UserControllerTest {
                         request.allowChat(),
                         request.allowCall(),
                         request.quietHoursStart(),
-                        request.quietHoursEnd()
+                        request.quietHoursEnd(),
+                        request.pushNotificationsEnabled(),
+                        request.suggestionNotificationsEnabled()
                 )))
                 .thenReturn(new UserMatchingPreferencesView(
                         42L,
@@ -147,7 +155,9 @@ class UserControllerTest {
                         request.allowChat(),
                         request.allowCall(),
                         request.quietHoursStart(),
-                        request.quietHoursEnd()
+                        request.quietHoursEnd(),
+                        request.pushNotificationsEnabled(),
+                        request.suggestionNotificationsEnabled()
                 ));
 
         mockMvc.perform(put("/api/v1/users/preferences")
@@ -159,6 +169,50 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.allowChat").value(request.allowChat()))
                 .andExpect(jsonPath("$.allowCall").value(request.allowCall()))
                 .andExpect(jsonPath("$.quietHoursStart").value("09:00:00"))
-                .andExpect(jsonPath("$.quietHoursEnd").value("11:00:00"));
+                .andExpect(jsonPath("$.quietHoursEnd").value("11:00:00"))
+                .andExpect(jsonPath("$.pushNotificationsEnabled").value(false))
+                .andExpect(jsonPath("$.suggestionNotificationsEnabled").value(true));
+    }
+
+    @Test
+    void get_preferences_returns_preferences_view() throws Exception {
+        given(userMatchingPreferencesQuery.getMatchingPreferences(42L))
+                .willReturn(Optional.of(new UserMatchingPreferencesView(
+                        42L,
+                        "UTC",
+                        true,
+                        true,
+                        null,
+                        null,
+                        false,
+                        true
+                )));
+
+        mockMvc.perform(get("/api/v1/users/preferences")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(42L))
+                .andExpect(jsonPath("$.pushNotificationsEnabled").value(false))
+                .andExpect(jsonPath("$.suggestionNotificationsEnabled").value(true));
+    }
+
+    @Test
+    void update_preferences_returns_400_when_required_flags_are_missing() throws Exception {
+        mapper.registerModule(new JavaTimeModule());
+
+        var request = new UserController.UpdatePreferencesRequest(
+                true,
+                true,
+                null,
+                null,
+                null,
+                true
+        );
+
+        mockMvc.perform(put("/api/v1/users/preferences")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

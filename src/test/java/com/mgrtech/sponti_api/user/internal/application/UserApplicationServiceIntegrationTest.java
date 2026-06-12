@@ -79,6 +79,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(persistedPreferences.get().isAllowCall()).isTrue();
         assertThat(persistedPreferences.get().getQuietHoursStart()).isNull();
         assertThat(persistedPreferences.get().getQuietHoursEnd()).isNull();
+        assertThat(persistedPreferences.get().isPushNotificationsEnabled()).isTrue();
+        assertThat(persistedPreferences.get().isSuggestionNotificationsEnabled()).isTrue();
 
         var matchingPreferences = userMatchingPreferencesQuery.getMatchingPreferences(result.id());
         assertThat(matchingPreferences).isPresent();
@@ -86,6 +88,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(matchingPreferences.get().allowCall()).isTrue();
         assertThat(matchingPreferences.get().quietHoursStart()).isNull();
         assertThat(matchingPreferences.get().quietHoursEnd()).isNull();
+        assertThat(matchingPreferences.get().pushNotificationsEnabled()).isTrue();
+        assertThat(matchingPreferences.get().suggestionNotificationsEnabled()).isTrue();
     }
 
     @Test
@@ -141,6 +145,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(preferences.get().matchingEnabled()).isTrue();
         assertThat(preferences.get().quietHoursStart()).isNull();
         assertThat(preferences.get().quietHoursEnd()).isNull();
+        assertThat(preferences.get().pushNotificationsEnabled()).isTrue();
+        assertThat(preferences.get().suggestionNotificationsEnabled()).isTrue();
     }
 
     @Test
@@ -189,6 +195,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(preferences.get().isAllowCall()).isTrue();
         assertThat(preferences.get().getQuietHoursStart()).isNull();
         assertThat(preferences.get().getQuietHoursEnd()).isNull();
+        assertThat(preferences.get().isPushNotificationsEnabled()).isTrue();
+        assertThat(preferences.get().isSuggestionNotificationsEnabled()).isTrue();
 
         userPreferenceFacade.updatePreferences(
                 created.id(),
@@ -196,7 +204,9 @@ class UserApplicationServiceIntegrationTest {
                         false,
                         false,
                         LocalTime.parse("09:00:00"),
-                        LocalTime.parse("11:00:00")
+                        LocalTime.parse("11:00:00"),
+                        false,
+                        false
                 ));
 
         var updatedPreferences = userPreferenceRepository.findByUserId(created.id());
@@ -206,6 +216,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(updatedPreferences.get().isAllowCall()).isFalse();
         assertThat(updatedPreferences.get().getQuietHoursStart()).isEqualTo(LocalTime.parse("09:00:00"));
         assertThat(updatedPreferences.get().getQuietHoursEnd()).isEqualTo(LocalTime.parse("11:00:00"));
+        assertThat(updatedPreferences.get().isPushNotificationsEnabled()).isFalse();
+        assertThat(updatedPreferences.get().isSuggestionNotificationsEnabled()).isFalse();
     }
 
     @Test
@@ -215,7 +227,9 @@ class UserApplicationServiceIntegrationTest {
                         true,
                         true,
                         LocalTime.parse("09:00:00"),
-                        LocalTime.parse("11:00:00")
+                        LocalTime.parse("11:00:00"),
+                        true,
+                        true
                 )))
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("Impossible to update the preferences: user not found.");
@@ -239,7 +253,9 @@ class UserApplicationServiceIntegrationTest {
                         true,
                         true,
                         LocalTime.parse("09:00:00"),
-                        LocalTime.parse("11:00:00")
+                        LocalTime.parse("11:00:00"),
+                        true,
+                        true
                 )))
                 .isInstanceOf(UserPreferencesNotFoundException.class)
                 .hasMessage("No user preferences found.");

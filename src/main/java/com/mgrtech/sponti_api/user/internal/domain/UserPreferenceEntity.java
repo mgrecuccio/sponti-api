@@ -35,6 +35,14 @@ public class UserPreferenceEntity {
     @Column(name = "quiet_hours_end")
     private LocalTime quietHoursEnd;
 
+    @Getter
+    @Column(name = "push_notifications_enabled", nullable = false)
+    private boolean pushNotificationsEnabled = true;
+
+    @Getter
+    @Column(name = "suggestion_notifications_enabled", nullable = false)
+    private boolean suggestionNotificationsEnabled = true;
+
     protected UserPreferenceEntity() {
     }
 
@@ -46,12 +54,16 @@ public class UserPreferenceEntity {
             boolean allowChat,
             boolean allowCall,
             LocalTime quietHoursStart,
-            LocalTime quietHoursEnd
+            LocalTime quietHoursEnd,
+            boolean pushNotificationsEnabled,
+            boolean suggestionNotificationsEnabled
     ) {
         this.allowChat = allowChat;
         this.allowCall = allowCall;
         this.quietHoursStart = quietHoursStart;
         this.quietHoursEnd = quietHoursEnd;
+        this.pushNotificationsEnabled = pushNotificationsEnabled;
+        this.suggestionNotificationsEnabled = suggestionNotificationsEnabled;
     }
 
     public static UserMatchingPreferencesView toMatchingPreferencesView(UserEntity user, UserPreferenceEntity preferences) {
@@ -61,7 +73,9 @@ public class UserPreferenceEntity {
                 preferences.isAllowChat(),
                 preferences.isAllowCall(),
                 preferences.getQuietHoursStart(),
-                preferences.getQuietHoursEnd()
+                preferences.getQuietHoursEnd(),
+                preferences.isPushNotificationsEnabled(),
+                preferences.isSuggestionNotificationsEnabled()
         );
     }
 }

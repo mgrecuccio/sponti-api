@@ -6,6 +6,8 @@ import com.mgrtech.sponti_api.notification.internal.configuration.NotificationPr
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationHistoryRepository;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -25,12 +27,19 @@ class NotificationApplicationServiceTest {
 
     private final NotificationHistoryRepository repository = mock(NotificationHistoryRepository.class);
     private final NotificationDispatcher dispatcher = mock(NotificationDispatcher.class);
+    private final UserMatchingPreferencesQuery userMatchingPreferencesQuery = mock(UserMatchingPreferencesQuery.class);
     private final NotificationApplicationService service = new NotificationApplicationService(
             Clock.fixed(NOW, ZoneOffset.UTC),
             notificationProperties(),
             repository,
-            dispatcher
+            dispatcher,
+            userMatchingPreferencesQuery
     );
+
+    NotificationApplicationServiceTest() {
+        when(userMatchingPreferencesQuery.getMatchingPreferences(anyLong()))
+                .thenReturn(Optional.of(preferences(true, true)));
+    }
 
     @Test
     void recordsMatchProposalNotificationWithoutCooldown() {
@@ -81,6 +90,43 @@ class NotificationApplicationServiceTest {
                         "matchId", "99",
                         "initiatorUserId", "1"
                 )
+        ));
+
+        verify(repository, never()).save(any());
+        verify(dispatcher, never()).dispatch(any(), any());
+    }
+
+    @Test
+    void doesNotRecordNotificationWhenPushDisabledByUserPreferences() {
+        when(userMatchingPreferencesQuery.getMatchingPreferences(2L))
+                .thenReturn(Optional.of(preferences(false, true)));
+
+        service.send(new SendNotificationCommand(
+                2L,
+                NotificationType.MATCH_PROPOSAL_CREATED,
+                "You have a new match invitation",
+                "Someone is available and invited you to connect.",
+                Map.of(
+                        "matchId", "99",
+                        "initiatorUserId", "1"
+                )
+        ));
+
+        verify(repository, never()).save(any());
+        verify(dispatcher, never()).dispatch(any(), any());
+    }
+
+    @Test
+    void doesNotRecordSuggestionNotificationWhenDisabledByUserPreferences() {
+        when(userMatchingPreferencesQuery.getMatchingPreferences(2L))
+                .thenReturn(Optional.of(preferences(true, false)));
+
+        service.send(new SendNotificationCommand(
+                2L,
+                NotificationType.MATCH_SUGGESTIONS_AVAILABLE,
+                "New suggestions available",
+                "You may have new opportunities to reconnect.",
+                Map.of("targetScreen", "suggestions")
         ));
 
         verify(repository, never()).save(any());
@@ -233,6 +279,22 @@ class NotificationApplicationServiceTest {
                 false,
                 new NotificationProperties.Fcm(false, null),
                 new NotificationProperties.Retry(true, Duration.ofMinutes(1), 3)
+        );
+    }
+
+    private UserMatchingPreferencesView preferences(
+            boolean pushNotificationsEnabled,
+            boolean suggestionNotificationsEnabled
+    ) {
+        return new UserMatchingPreferencesView(
+                2L,
+                "UTC",
+                true,
+                true,
+                null,
+                null,
+                pushNotificationsEnabled,
+                suggestionNotificationsEnabled
         );
     }
 }
