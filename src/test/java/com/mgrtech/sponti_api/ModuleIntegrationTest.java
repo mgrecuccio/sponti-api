@@ -13,6 +13,6 @@ import java.lang.annotation.*;
 @Documented
 @ApplicationModuleTest
 @ActiveProfiles("test")
-@Import({TestcontainersConfiguration.class, TestDatabaseCleanerConfiguration.class})
+@Import({TestcontainersConfiguration.class, TestDatabaseCleanerConfiguration.class, TestObservabilityConfiguration.class})
 public @interface ModuleIntegrationTest {
 }

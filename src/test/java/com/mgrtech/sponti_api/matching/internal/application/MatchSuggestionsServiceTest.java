@@ -17,8 +17,10 @@ import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException
 import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -64,7 +66,8 @@ class MatchSuggestionsServiceTest {
                 contactQuery,
                 userMatchingPreferencesQuery,
                 repository,
-                eventPublisher
+                eventPublisher,
+                new OperationalMetrics(new SimpleMeterRegistry())
         );
 
         when(userMatchingPreferencesQuery.getMatchingPreferences(USER_ID))

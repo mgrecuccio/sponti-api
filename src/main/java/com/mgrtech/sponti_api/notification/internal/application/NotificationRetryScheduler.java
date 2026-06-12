@@ -6,6 +6,7 @@ import com.mgrtech.sponti_api.notification.internal.configuration.NotificationPr
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationHistoryRepository;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
@@ -29,6 +31,7 @@ class NotificationRetryScheduler {
     private final NotificationProperties properties;
     private final NotificationHistoryRepository repository;
     private final NotificationDispatcher dispatcher;
+    private final OperationalMetrics metrics;
 
     @Scheduled(
             fixedDelayString = "${sponti.notification.retry.fixed-delay}",
@@ -36,24 +39,38 @@ class NotificationRetryScheduler {
     )
     @Transactional
     void retryDueNotifications() {
+        var startedAt = Instant.now(clock);
         if (!properties.retry().enabled()) {
+            metrics.schedulerDuration("notification_retry", "skipped", Duration.between(startedAt, Instant.now(clock)));
+            log.debug("Notification retry scheduler skipped: reason=disabled");
             return;
         }
 
-        var now = Instant.now(clock);
-        var histories = repository.findTop50ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
-                NotificationDeliveryStatus.RETRY_PENDING,
-                now
-        );
+        try {
+            var now = Instant.now(clock);
+            var histories = repository.findTop50ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
+                    NotificationDeliveryStatus.RETRY_PENDING,
+                    now
+            );
 
-        for (var history : histories) {
-            if (history.getAttemptCount() >= properties.retry().maxAttempts()) {
-                history.markFailed(history.getFailureCode(), history.getFailureReason(), now);
-                continue;
+            log.info("Notification retry scheduler found due notifications: count={}", histories.size());
+            for (var history : histories) {
+                if (history.getAttemptCount() >= properties.retry().maxAttempts()) {
+                    history.markFailed(history.getFailureCode(), history.getFailureReason(), now);
+                    metrics.notificationRetryVolume("max_attempts_exceeded");
+                    log.warn("Notification retry skipped: notificationHistoryId={} reason=max-attempts-exceeded", history.getId());
+                    continue;
+                }
+
+                metrics.notificationRetryVolume("dispatched");
+                log.info("Retrying notification delivery: notificationHistoryId={}", history.getId());
+                dispatcher.dispatch(history, commandFrom(history));
             }
-
-            log.info("Retrying notification delivery: notificationHistoryId={}", history.getId());
-            dispatcher.dispatch(history, commandFrom(history));
+            metrics.schedulerDuration("notification_retry", "success", Duration.between(startedAt, Instant.now(clock)));
+        } catch (RuntimeException ex) {
+            metrics.schedulerDuration("notification_retry", "failure", Duration.between(startedAt, Instant.now(clock)));
+            log.error("Notification retry scheduler failed", ex);
+            throw ex;
         }
     }
 
