@@ -2,8 +2,10 @@ package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
@@ -24,16 +26,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
+import static com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity.toMatchingPreferencesView;
 
 @Service
 @AllArgsConstructor
 public class UserApplicationService implements
         UserFacade,
+        UserPreferenceFacade,
         UserRegistrationFacade,
         UserCredentialsQuery,
         UserProfileQuery,
@@ -120,7 +125,7 @@ public class UserApplicationService implements
 
     @Override
     @Transactional
-    public UserProfileView update(Long userId, UpdateUserCommand command) {
+    public UserProfileView updateProfile(Long userId, UpdateUserCommand command) {
         log.info("Updating userId={}", userId);
 
         var user = userRepository.findById(userId)
@@ -131,14 +136,26 @@ public class UserApplicationService implements
         return UserEntity.toProfileView(user);
     }
 
-    private UserMatchingPreferencesView toMatchingPreferencesView(UserEntity user, UserPreferenceEntity preferences) {
-        return new UserMatchingPreferencesView(
-                user.getId(),
-                user.getTimezone(),
-                preferences.isAllowChat(),
-                preferences.isAllowCall(),
-                preferences.getQuietHoursStart(),
-                preferences.getQuietHoursEnd()
+    @Override
+    @Transactional
+    public UserMatchingPreferencesView updatePreferences(Long userId, UpdatePreferencesCommand command) {
+        log.info("Preferences updated for userId={}: allowChat={}, allowCall: {}, quietHoursStart={}, quietHoursEnd={}",
+                userId, command.allowChat(), command.allowCall(), command.quietHoursStart(), command.quietHoursEnd());
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Impossible to update the preferences: user not found."));
+
+        var preferences = userPreferenceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new UserPreferencesNotFoundException("No user preferences found."));
+
+        preferences.update(
+                command.allowChat(),
+                command.allowCall(),
+                command.quietHoursStart(),
+                command.quietHoursEnd()
         );
+        log.info("Preferences updated for userId={}: allowChat={}, allowCall: {}, quietHoursStart={}, quietHoursEnd={}",
+                userId, preferences.isAllowChat(), preferences.isAllowCall(), preferences.getQuietHoursStart(), preferences.getQuietHoursEnd());
+        return toMatchingPreferencesView(user, preferences);
     }
 }
