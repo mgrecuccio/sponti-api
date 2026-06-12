@@ -123,6 +123,20 @@ class ContactApplicationService implements ContactFacade {
     }
 
     @Override
+    public void rejectInvitation(Long recipientUserId, Long invitationId) {
+        log.info("UserRecipientId={} is rejecting invitationId={}", recipientUserId, invitationId);
+
+        var now = Instant.now(clock);
+
+        var invitation = contactInvitationRepository
+                .findByIdAndRecipientUserIdAndStatus(invitationId, recipientUserId, InvitationStatus.PENDING)
+                .orElseThrow(ContactInvitationNotFoundException::new);
+
+        invitation.reject(now);
+        log.info("UserRecipientId={} successfully rejected invitationId={}", recipientUserId, invitationId);
+    }
+
+    @Override
     public void acceptInvitation(Long recipientUserId, Long invitationId) {
         log.info("Accept contact invitation requested: senderUserId={} , invitationId={}", recipientUserId, invitationId);
         var now = Instant.now(clock);

@@ -1,11 +1,11 @@
 package com.mgrtech.sponti_api.contact.internal.web;
 
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
-import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -71,6 +71,16 @@ class ContactController {
     ) {
         var recipientUserId = extractUserId(authentication);
         contactFacade.acceptInvitation(recipientUserId, invitationId);
+    }
+
+    @PostMapping("/invitations/{invitationId}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void rejectInvitation(
+            Authentication authentication,
+            @PathVariable Long invitationId
+    ) {
+        var recipientUserId = extractUserId(authentication);
+        contactFacade.rejectInvitation(recipientUserId, invitationId);
     }
 
     @PostMapping("/{contactUserId}/block")
