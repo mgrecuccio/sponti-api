@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.auth.internal.security;
 
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
+import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
 import com.mgrtech.sponti_api.user.internal.web.UserController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class SecurityErrorResponseTest {
 
     @MockitoBean
     UserFacade userFacade;
+
+    @MockitoBean
+    UserPreferenceFacade userPreferenceFacade;
 
     @Test
     void unauthenticated_request_returns_stable_error_code() throws Exception {

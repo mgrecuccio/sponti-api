@@ -1,12 +1,15 @@
 package com.mgrtech.sponti_api.user.internal.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
+import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
+import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
+import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -16,6 +19,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalTime;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.given;
@@ -37,6 +41,9 @@ class UserControllerTest {
 
     @MockitoBean
     UserFacade userFacade;
+
+    @MockitoBean
+    UserPreferenceFacade userPreferenceFacade;
 
     @MockitoBean
     JwtTokenService jwtTokenService;
@@ -73,7 +80,7 @@ class UserControllerTest {
                 "UTC"
         );
 
-        when(userFacade.update(42L, new UpdateUserCommand(request.displayName(), request.timezone())))
+        when(userFacade.updateProfile(42L, new UpdateUserCommand(request.displayName(), request.timezone())))
                 .thenReturn(new UserProfileView(
                         42L,
                         "email@test.com",
@@ -114,5 +121,44 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/v1/users/me").principal(authentication))
                 .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void update_preferences_returns_preferences_view() throws Exception {
+        mapper.registerModule(new JavaTimeModule());
+
+        var request = new UserController.UpdatePreferencesRequest(
+                true,
+                true,
+                LocalTime.parse("09:00:00"),
+                LocalTime.parse("11:00:00")
+        );
+
+        when(userPreferenceFacade.updatePreferences(42L,
+                new UpdatePreferencesCommand(
+                        request.allowChat(),
+                        request.allowCall(),
+                        request.quietHoursStart(),
+                        request.quietHoursEnd()
+                )))
+                .thenReturn(new UserMatchingPreferencesView(
+                        42L,
+                        "UTC",
+                        request.allowChat(),
+                        request.allowCall(),
+                        request.quietHoursStart(),
+                        request.quietHoursEnd()
+                ));
+
+        mockMvc.perform(put("/api/v1/users/preferences")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(jsonPath("$.userId").value(42L))
+                .andExpect(jsonPath("$.timezone").value("UTC"))
+                .andExpect(jsonPath("$.allowChat").value(request.allowChat()))
+                .andExpect(jsonPath("$.allowCall").value(request.allowCall()))
+                .andExpect(jsonPath("$.quietHoursStart").value("09:00:00"))
+                .andExpect(jsonPath("$.quietHoursEnd").value("11:00:00"));
     }
 }

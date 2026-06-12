@@ -47,6 +47,13 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, ApiErrorCode.USER_NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(UserPreferencesNotFoundException.class)
+    ProblemDetail handleUserPreferencesNotFound(UserPreferencesNotFoundException ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.NOT_FOUND.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.NOT_FOUND, ApiErrorCode.USER_PREFERENCES_NOT_FOUND_EXCEPTION, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     ProblemDetail handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",
