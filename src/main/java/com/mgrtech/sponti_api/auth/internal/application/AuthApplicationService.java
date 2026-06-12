@@ -8,6 +8,7 @@ import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
@@ -35,6 +36,7 @@ class AuthApplicationService implements AuthFacade {
     private final UserCredentialsQuery userCredentialsQuery;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
+    private final OperationalMetrics metrics;
 
     AuthApplicationService(
             JwtTokenService jwtTokenService,
@@ -42,7 +44,8 @@ class AuthApplicationService implements AuthFacade {
             UserRegistrationFacade userRegistrationFacade,
             UserCredentialsQuery userCredentialsQuery,
             RefreshTokenService refreshTokenService,
-            JwtProperties jwtProperties
+            JwtProperties jwtProperties,
+            OperationalMetrics metrics
     ) {
         this.jwtTokenService = jwtTokenService;
         this.passwordEncoder = passwordEncoder;
@@ -50,6 +53,7 @@ class AuthApplicationService implements AuthFacade {
         this.userCredentialsQuery = userCredentialsQuery;
         this.refreshTokenService = refreshTokenService;
         this.jwtProperties = jwtProperties;
+        this.metrics = metrics;
     }
 
     @Override
@@ -91,9 +95,14 @@ class AuthApplicationService implements AuthFacade {
         var normalizedEmail = normalizeEmail(command.email());
 
         var user = userCredentialsQuery.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new BadCredentialsException("Bad Credentials"));
+                .orElseThrow(() -> {
+                    metrics.authFailure("unknown_email");
+                    log.warn("Login rejected: unknown email={}", maskEmail(command.email()));
+                    return new BadCredentialsException("Bad Credentials");
+                });
 
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
+            metrics.authFailure("bad_password");
             log.warn("Login rejected: bad credentials for email={}", maskEmail(command.email()));
             throw new BadCredentialsException("Bad credentials");
         }

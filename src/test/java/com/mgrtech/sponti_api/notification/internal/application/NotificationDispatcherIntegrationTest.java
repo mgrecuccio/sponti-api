@@ -8,9 +8,11 @@ import com.mgrtech.sponti_api.notification.api.command.SendNotificationCommand;
 import com.mgrtech.sponti_api.notification.internal.delivery.PushNotificationSender;
 import com.mgrtech.sponti_api.notification.internal.domain.*;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationDeviceTokenRepository;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
 import java.util.Map;
@@ -25,10 +27,10 @@ class NotificationDispatcherIntegrationTest {
     NotificationDeviceTokenRepository tokenRepository;
 
     @Autowired
-    PushNotificationSender sender;
-
-    @Autowired
     NotificationDispatcher dispatcher;
+
+    @MockitoBean
+    OperationalMetrics operationalMetrics;
 
     @Test
     public void dispatch_notification_skips_deliver_if_token_not_found() {

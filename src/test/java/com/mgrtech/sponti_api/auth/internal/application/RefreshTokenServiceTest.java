@@ -6,6 +6,8 @@ import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.shared.error.ExpiredRefreshTokenException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
 import com.mgrtech.sponti_api.shared.error.RevokedRefreshTokenException;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -23,7 +25,8 @@ class RefreshTokenServiceTest {
     private final RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
     private final RefreshTokenService service = new RefreshTokenService(
             repository,
-            new JwtProperties("01234567890123456789012345678901", "sponti-test", 15, 30)
+            new JwtProperties("01234567890123456789012345678901", "sponti-test", 15, 30),
+            new OperationalMetrics(new SimpleMeterRegistry())
     );
 
     @Test

@@ -6,6 +6,8 @@ import com.mgrtech.sponti_api.notification.internal.configuration.NotificationPr
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationHistoryRepository;
+import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -99,7 +101,8 @@ class NotificationRetrySchedulerTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 properties,
                 historyRepository,
-                dispatcher
+                dispatcher,
+                new OperationalMetrics(new SimpleMeterRegistry())
         );
     }
 
