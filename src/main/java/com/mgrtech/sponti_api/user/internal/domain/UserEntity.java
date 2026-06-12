@@ -108,7 +108,9 @@ public class UserEntity {
                 true,
                 true,
                 null,
-                null
+                null,
+                true,
+                true
         );
     }
 }

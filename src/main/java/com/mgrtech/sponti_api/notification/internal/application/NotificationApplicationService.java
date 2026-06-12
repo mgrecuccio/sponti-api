@@ -7,6 +7,7 @@ import com.mgrtech.sponti_api.notification.internal.configuration.NotificationPr
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;
 import com.mgrtech.sponti_api.notification.internal.repository.NotificationHistoryRepository;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ class NotificationApplicationService implements NotificationFacade {
     private final NotificationProperties properties;
     private final NotificationHistoryRepository repository;
     private final NotificationDispatcher dispatcher;
+    private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -63,6 +65,13 @@ class NotificationApplicationService implements NotificationFacade {
     }
 
     private SendDecision sendDecision(SendNotificationCommand command, Long relatedMatchId, Instant now) {
+        if (!canSendByUserPreferences(command)) {
+            return SendDecision.suppressed(
+                    "user-notification-preferences",
+                    "type=%s userId=%d".formatted(command.type(), command.userId())
+            );
+        }
+
         if (command.type() == NotificationType.MATCH_PROPOSAL_CREATED) {
             return proposalCreatedSendDecision(command, relatedMatchId);
         }
@@ -72,6 +81,14 @@ class NotificationApplicationService implements NotificationFacade {
         }
 
         return SendDecision.allowed();
+    }
+
+    private boolean canSendByUserPreferences(SendNotificationCommand command) {
+        return userMatchingPreferencesQuery.getMatchingPreferences(command.userId())
+                .map(preferences -> preferences.pushNotificationsEnabled()
+                        && (command.type() != NotificationType.MATCH_SUGGESTIONS_AVAILABLE
+                        || preferences.suggestionNotificationsEnabled()))
+                .orElse(true);
     }
 
     private SendDecision proposalCreatedSendDecision(SendNotificationCommand command, Long relatedMatchId) {

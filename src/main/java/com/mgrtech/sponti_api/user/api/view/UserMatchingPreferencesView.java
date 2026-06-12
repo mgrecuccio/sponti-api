@@ -8,7 +8,9 @@ public record UserMatchingPreferencesView(
         boolean allowChat,
         boolean allowCall,
         LocalTime quietHoursStart,
-        LocalTime quietHoursEnd
+        LocalTime quietHoursEnd,
+        boolean pushNotificationsEnabled,
+        boolean suggestionNotificationsEnabled
 ) {
     public boolean matchingEnabled() {
         return allowChat || allowCall;

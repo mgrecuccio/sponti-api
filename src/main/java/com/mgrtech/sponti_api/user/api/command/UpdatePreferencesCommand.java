@@ -6,6 +6,8 @@ public record UpdatePreferencesCommand(
         boolean allowChat,
         boolean allowCall,
         LocalTime quietHoursStart,
-        LocalTime quietHoursEnd
+        LocalTime quietHoursEnd,
+        boolean pushNotificationsEnabled,
+        boolean suggestionNotificationsEnabled
 ) {
 }

@@ -139,8 +139,8 @@ public class UserApplicationService implements
     @Override
     @Transactional
     public UserMatchingPreferencesView updatePreferences(Long userId, UpdatePreferencesCommand command) {
-        log.info("Preferences updated for userId={}: allowChat={}, allowCall: {}, quietHoursStart={}, quietHoursEnd={}",
-                userId, command.allowChat(), command.allowCall(), command.quietHoursStart(), command.quietHoursEnd());
+        log.info("Preferences updated for userId={}: allowChat={}, allowCall={}, quietHoursStart={}, quietHoursEnd={}, pushNotificationsEnabled={}, suggestionNotificationsEnabled={}",
+                userId, command.allowChat(), command.allowCall(), command.quietHoursStart(), command.quietHoursEnd(), command.pushNotificationsEnabled(), command.suggestionNotificationsEnabled());
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Impossible to update the preferences: user not found."));
@@ -152,10 +152,12 @@ public class UserApplicationService implements
                 command.allowChat(),
                 command.allowCall(),
                 command.quietHoursStart(),
-                command.quietHoursEnd()
+                command.quietHoursEnd(),
+                command.pushNotificationsEnabled(),
+                command.suggestionNotificationsEnabled()
         );
-        log.info("Preferences updated for userId={}: allowChat={}, allowCall: {}, quietHoursStart={}, quietHoursEnd={}",
-                userId, preferences.isAllowChat(), preferences.isAllowCall(), preferences.getQuietHoursStart(), preferences.getQuietHoursEnd());
+        log.info("Preferences updated for userId={}: allowChat={}, allowCall={}, quietHoursStart={}, quietHoursEnd={}, pushNotificationsEnabled={}, suggestionNotificationsEnabled={}",
+                userId, preferences.isAllowChat(), preferences.isAllowCall(), preferences.getQuietHoursStart(), preferences.getQuietHoursEnd(), preferences.isPushNotificationsEnabled(), preferences.isSuggestionNotificationsEnabled());
         return toMatchingPreferencesView(user, preferences);
     }
 }
