@@ -92,6 +92,9 @@ class NotificationDispatcherTest {
         assertThat(history.getFailureReason()).isNull();
         assertThat(history.getNextRetryAt()).isNull();
         assertThat(history.getAttemptCount()).isEqualTo(1);
+        assertThat(history.getUserId()).isEqualTo(42L);
+        assertThat(history.getRelatedUserId()).isEqualTo(24L);
+        assertThat(history.getRelatedMatchId()).isEqualTo(51L);
     }
 
     @Test

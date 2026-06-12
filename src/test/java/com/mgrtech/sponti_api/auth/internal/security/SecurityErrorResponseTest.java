@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.auth.internal.security;
 
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
@@ -37,6 +38,9 @@ class SecurityErrorResponseTest {
 
     @MockitoBean
     UserPreferenceFacade userPreferenceFacade;
+
+    @MockitoBean
+    UserMatchingPreferencesQuery userMatchingPreferencesQuery;
 
     @Test
     void unauthenticated_request_returns_stable_error_code() throws Exception {

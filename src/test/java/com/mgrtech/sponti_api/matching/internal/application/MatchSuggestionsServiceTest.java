@@ -429,7 +429,9 @@ class MatchSuggestionsServiceTest {
                 allowChat,
                 allowCall,
                 quietHoursStart,
-                quietHoursEnd
+                quietHoursEnd,
+                true,
+                true
         );
     }
 

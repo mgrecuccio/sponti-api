@@ -4,6 +4,7 @@ import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
@@ -30,6 +31,7 @@ import java.time.LocalTime;
 public class UserController {
 
     private final UserProfileQuery userProfileQuery;
+    private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
     private final UserFacade userFacade;
     private final UserPreferenceFacade userPreferenceFacade;
 
@@ -61,8 +63,18 @@ public class UserController {
                 request.allowChat(),
                 request.allowCall(),
                 request.quietHoursStart(),
-                request.quietHoursEnd()
+                request.quietHoursEnd(),
+                request.pushNotificationsEnabled(),
+                request.suggestionNotificationsEnabled()
         ));
+    }
+
+    @GetMapping("/preferences")
+    @Operation(summary = "Get the user preferences")
+    UserMatchingPreferencesView getPreferences(Authentication authentication) {
+        var userId = extractUserId(authentication);
+        return userMatchingPreferencesQuery.getMatchingPreferences(userId)
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user preferences not found"));
     }
 
     private Long extractUserId(Authentication authentication) {
@@ -83,10 +95,12 @@ public class UserController {
 
     @Schema(description = "Request to update user preferences")
     record UpdatePreferencesRequest(
-            @Schema(example = "true") @NotNull boolean allowChat,
-            @Schema(example = "true") @NotNull boolean allowCall,
+            @Schema(example = "true") @NotNull Boolean allowChat,
+            @Schema(example = "true") @NotNull Boolean allowCall,
             @Schema(example = "09:00:00") LocalTime quietHoursStart,
-            @Schema(example = "11:00:00") LocalTime quietHoursEnd
+            @Schema(example = "11:00:00") LocalTime quietHoursEnd,
+            @Schema(example = "true") @NotNull Boolean pushNotificationsEnabled,
+            @Schema(example = "true") @NotNull Boolean suggestionNotificationsEnabled
     ) {
     }
 }
