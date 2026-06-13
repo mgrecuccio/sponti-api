@@ -164,8 +164,8 @@ class AvailabilityController {
 
     @Schema(description = "Create Availability Override request payload")
     record CreateAvailabilityOverrideRequest(
-            @Schema(example = "2026-03-28T13:00:00Z") @NotNull Instant startDateTime,
-            @Schema(example = "2026-03-28T15:00:00Z") @NotNull Instant endDateTime,
+            @Schema(example = "2026-03-28T13:00Z") @NotNull Instant startDateTime,
+            @Schema(example = "2026-03-28T15:00Z") @NotNull Instant endDateTime,
             @Schema(example = "AVAILABLE") @NotNull AvailabilityOverrideType type
     ) {}
 

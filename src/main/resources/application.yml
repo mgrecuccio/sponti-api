@@ -1,14 +1,8 @@
 spring:
   application:
     name: sponti-api
-  datasource:
-    url: jdbc:postgresql://localhost:5432/sponti
-    username: sponti
-    password: sponti
-  data:
-    redis:
-      host: localhost
-      port: 6379
+  profiles:
+    default: local
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,11 +17,8 @@ management:
         include: health,info,metrics,modulith,firebase
 
 app:
-  cors:
-    allowed-origin: http://localhost:8100
   security:
     jwt:
-      secret: "0123456789012345678901234567890123456789012345678901234567890123"
       issuer: sponti-api
       access-token-minutes: 15
       refresh-token-days: 30

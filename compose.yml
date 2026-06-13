@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: sponti
-      POSTGRES_USER: sponti
-      POSTGRES_PASSWORD: sponti
+      POSTGRES_DB: ${POSTGRES_DB:-sponti}
+      POSTGRES_USER: ${POSTGRES_USER:-sponti}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sponti}
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sponti -d sponti"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,6 +22,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  sponti-api:
+    build: .
+    image: sponti-api:latest
+    container_name: sponti-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/sponti}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-sponti}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-sponti}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN:-http://localhost:8100}
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-0123456789012345678901234567890123456789012345678901234567890123}
+      SPONTI_NOTIFICATION_PUSH_ENABLED: ${SPONTI_NOTIFICATION_PUSH_ENABLED:-false}
+      SPONTI_NOTIFICATION_FCM_ENABLED: ${SPONTI_NOTIFICATION_FCM_ENABLED:-false}
+      FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
