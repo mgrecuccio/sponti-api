@@ -24,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
     private static final String CORRELATION_ID_MDC_KEY = "correlationId";
     private static final String USER_ID_MDC_KEY = "userId";
+    private static final String PROMETHEUS_ENDPOINT = "/actuator/prometheus";
 
     private final JwtTokenService jwtTokenService;
 
@@ -70,13 +71,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             long durationMs = (System.nanoTime() - startedAtNanos) / 1_000_000;
-            log.info(
-                    "HTTP request completed: method={} path={} status={} durationMs={}",
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    response.getStatus(),
-                    durationMs
-            );
+            if (!PROMETHEUS_ENDPOINT.equals(request.getRequestURI())) {
+                log.info(
+                        "HTTP request completed: method={} path={} status={} durationMs={}",
+                        request.getMethod(),
+                        request.getRequestURI(),
+                        response.getStatus(),
+                        durationMs
+                );
+            }
             MDC.remove(USER_ID_MDC_KEY);
             MDC.remove(CORRELATION_ID_MDC_KEY);
         }

@@ -97,10 +97,18 @@ This will start:
 * Kibana
 * Filebeat
 
+Docker Compose is intended for local development only. It reads local values from `.env` when present; use `.env.example` as the template for local variables.
+
 ### 3. Run the application
 
 ```bash
 ./mvnw spring-boot:run
+```
+
+The default Spring profile is `local`. Production deployments should set:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
 ```
 
 ---
@@ -123,9 +131,11 @@ The local Docker setup includes a minimal ELK stack for log exploration:
 * `kibana`: UI for searching and filtering logs
 * `filebeat`: reads Docker container logs and ships them to Elasticsearch
 
+Metricbeat is not part of the local Compose stack. Production metrics collection should be configured in the Azure/IaC layer.
+
 ### `compose.yml`
 
-`compose.yml` starts the following observability services:
+`compose.yml` starts the following local observability services:
 
 * `elasticsearch` on `http://localhost:9200`
 * `kibana` on `http://localhost:5601`
@@ -205,6 +215,30 @@ Important notes:
 * field changes in `filebeat.yml` apply only to newly ingested logs
 * `sponti.domain` is currently extracted from HTTP request completion log lines
 * if you want domain filtering on every application log line, the application should also emit that value directly in structured logs or MDC
+
+---
+
+## Runtime Configuration
+
+Application configuration is split by responsibility:
+
+* `application.yml`: shared defaults and stable application behavior
+* `application-local.yml`: local developer values and local actuator exposure
+* `application-prod.yml`: production behavior with deployment values supplied by environment variables
+
+Production infrastructure is expected to be provided by Azure/IaC, not by a production Compose file. The same container image should be promoted between environments, while Azure App Settings, Key Vault references, and managed service connection details provide the runtime values.
+
+Required production variables include:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+SPRING_DATASOURCE_URL=
+SPRING_DATASOURCE_USERNAME=
+SPRING_DATASOURCE_PASSWORD=
+SPRING_DATA_REDIS_HOST=
+APP_CORS_ALLOWED_ORIGIN=
+APP_SECURITY_JWT_SECRET=
+```
 
 ---
 
@@ -334,8 +368,6 @@ Useful commands:
 * [x] Candidate-side accept / decline
 * [x] Incoming match invitations
 * [x] Conservative suggestion scheduler
-* [ ] Domain-event-triggered suggestion checks, for example availability rule changes or accepted contacts
-
 ---
 
 ### Phase 6 — Notifications ✅
@@ -355,8 +387,8 @@ Useful commands:
 ### Phase 7 — Production Readiness
 
 * [ ] CI/CD pipeline
-* [ ] Observability (logs/metrics)
-* [ ] Security hardening
+* [x] Observability (logs/metrics)
+* [x] Security hardening
 * [ ] Deployment (Azure)
 
 ---
