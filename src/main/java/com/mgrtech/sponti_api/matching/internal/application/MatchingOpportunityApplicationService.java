@@ -63,7 +63,27 @@ class MatchingOpportunityApplicationService {
     }
 
     private boolean isCurrent(SuggestedMatchView suggestion, Instant now) {
-        var startsBeforeNextSchedulerRun = !suggestion.overlapStart().isAfter(now.plus(schedulerProperties.fixedDelay()));
-        return startsBeforeNextSchedulerRun && suggestion.overlapEnd().isAfter(now);
+        var nextSchedulerRunAt = now.plus(schedulerProperties.fixedDelay());
+        var startsBeforeNextSchedulerRun = !suggestion.overlapStart().isAfter(nextSchedulerRunAt);
+        var endsAfterNow = suggestion.overlapEnd().isAfter(now);
+
+        if (!startsBeforeNextSchedulerRun) {
+            log.debug(
+                    "Matching opportunity suggestion skipped: candidateUserId={} reason=starts-after-next-scheduler-run overlapStart={} nextSchedulerRunAt={}",
+                    suggestion.candidateUserId(),
+                    suggestion.overlapStart(),
+                    nextSchedulerRunAt
+            );
+        }
+        if (!endsAfterNow) {
+            log.debug(
+                    "Matching opportunity suggestion skipped: candidateUserId={} reason=overlap-ended overlapEnd={} now={}",
+                    suggestion.candidateUserId(),
+                    suggestion.overlapEnd(),
+                    now
+            );
+        }
+
+        return startsBeforeNextSchedulerRun && endsAfterNow;
     }
 }

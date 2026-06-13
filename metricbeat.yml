@@ -1,0 +1,22 @@
+metricbeat.modules:
+  - module: prometheus
+    period: 10s
+    hosts: ["sponti-api:8080"]
+    metrics_path: /actuator/prometheus
+    namespace: sponti
+
+processors:
+  - add_fields:
+      target: service
+      fields:
+        name: sponti-api
+  - add_fields:
+      target: environment
+      fields:
+        name: dev
+
+setup.kibana:
+  host: "kibana:5601"
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
