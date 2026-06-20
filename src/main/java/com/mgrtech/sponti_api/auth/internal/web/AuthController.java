@@ -4,6 +4,7 @@ import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
+import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -38,6 +39,7 @@ class AuthController {
                         request.email(),
                         request.password(),
                         request.displayName(),
+                        request.phoneNumber(),
                         request.timezone()
                 )
         );
@@ -80,6 +82,7 @@ class AuthController {
             @Schema(example = "user@example.com") @NotBlank @Email String email,
             @Schema(example = "strongPassword") @NotBlank String password,
             @Schema(example = "nickname") @NotBlank String displayName,
+            @Schema(example = "+32468009911") @ValidE164PhoneNumber String phoneNumber,
             @Schema(example = "Europe/Brussels")String timezone
     ) {
     }

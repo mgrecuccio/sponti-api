@@ -1,0 +1,398 @@
+Sponti - WhatsApp Match Contact Flow Technical Analysis
+
+1. Overview
+
+The final goal of the match proposal flow is that two users can start a WhatsApp conversation only after both users have accepted the same match proposal.
+
+The backend should own the business decision that the chat can be unlocked. The mobile app should only:
+- show the current match state
+- react to push notifications as navigation hints
+- call the backend for the contact link
+- open WhatsApp with the returned URL
+
+The WhatsApp link must not be treated as a client-side decision. It depends on trusted match state, authenticated user identity, user phone numbers, and consent rules.
+
+------------------------------------------------------------------------
+
+2. Target User Flow
+
+2.1 Proposal Creation
+
+User A creates a match proposal for User B.
+
+Current concept:
+- initiatorUserId = User A
+- candidateUserId = User B
+- status = PROPOSED
+- expiresAt is set
+
+The backend sends a push notification to User B telling them that a match proposal is waiting.
+
+2.2 First Acceptance
+
+User B accepts the match proposal.
+
+For the current one-sided proposal model, this is enough to mark the proposal as ACCEPTED because User A already explicitly initiated the proposal.
+
+If the product later changes to a fully symmetric model where both users receive the same proposal and both must independently accept, the database should store each user's decision separately:
+- userAResponse = PENDING / ACCEPTED / DECLINED
+- userBResponse = PENDING / ACCEPTED / DECLINED
+
+Then the proposal becomes ACCEPTED only when both responses are ACCEPTED.
+
+2.3 Accepted Match Notification
+
+Once the backend determines that the match is accepted by both required parties, it sends a push notification to both users.
+
+Recommended notification copy:
+- Title: "It's a match"
+- Body: "Open WhatsApp to start chatting."
+
+The push notification should not contain the WhatsApp URL. It should contain routing data only, for example:
+- matchId
+- targetScreen=match_detail
+- action=match_accepted
+
+The mobile app should use the notification only as a prompt to open or refresh the match screen.
+
+2.4 Fetching The Contact Link
+
+When the user opens the accepted match screen and taps the chat action, the app calls an authenticated backend endpoint:
+
+POST /api/v1/matches/{matchId}/contact-link
+
+The backend validates the request and returns:
+
+{
+  "type": "WHATSAPP",
+  "url": "https://wa.me/32470123456",
+  "expiresAt": null
+}
+
+The mobile app then opens the URL using platform-specific link handling.
+
+------------------------------------------------------------------------
+
+3. Backend Responsibilities
+
+The backend is responsible for:
+- storing match proposal state
+- deciding when the match is accepted
+- ensuring the authenticated user belongs to the match
+- ensuring the match has not expired, been declined, or been cancelled
+- ensuring both users have valid phone numbers
+- creating the canonical WhatsApp URL
+- returning the link only through an authenticated API response
+- sending push notifications with routing metadata, not the final URL
+
+The backend should not be responsible for:
+- detecting whether WhatsApp is installed
+- opening WhatsApp
+- rendering the chat button
+- trusting the mobile app to decide whether the match is accepted
+
+------------------------------------------------------------------------
+
+4. Mobile App Responsibilities
+
+The mobile app is responsible for:
+- showing proposal state
+- showing "You accepted. Waiting for their response." when the current user accepted but the other required response is still pending
+- showing expiration information for pending proposals
+- opening the match detail screen when a push notification is tapped
+- calling the contact-link endpoint when the user wants to chat
+- opening the returned WhatsApp link
+- handling the case where WhatsApp is not installed
+
+Recommended pending copy:
+- "You accepted. We'll let you know if they accept too."
+- "Waiting for their response."
+
+Avoid wording like:
+- "Waiting for User B"
+
+That wording can create unnecessary pressure and exposes too much about the other user's pending decision.
+
+------------------------------------------------------------------------
+
+5. Contact Link Endpoint
+
+Recommended endpoint:
+
+POST /api/v1/matches/{matchId}/contact-link
+
+POST is recommended because the operation may later:
+- record an audit event
+- apply rate limiting
+- generate a short-lived access token
+- log that the user requested the contact action
+
+Validation rules:
+- match proposal exists
+- authenticated user is either initiatorUserId or candidateUserId
+- match status is ACCEPTED
+- match is not expired
+- neither user has blocked or removed the other
+- current user has a phone number
+- other user has a phone number
+- phone numbers are normalized and valid for WhatsApp link creation
+
+Response:
+
+{
+  "type": "WHATSAPP",
+  "url": "https://wa.me/<other-user-phone-number-without-plus>",
+  "expiresAt": null
+}
+
+Important:
+The returned URL should use the other user's phone number, not the current user's phone number.
+
+WhatsApp wa.me format:
+- Store phone number internally as E.164, for example +32470123456
+- Build URL by removing the leading plus sign
+- Result: https://wa.me/32470123456
+
+Do not expose the raw phone number in normal profile, contact, or match APIs unless the product explicitly requires it.
+
+------------------------------------------------------------------------
+
+6. Registration Flow Changes
+
+Phone number should be supported during registration but should not necessarily be mandatory at account creation.
+
+Recommended MVP behavior:
+- phone number is optional during registration
+- users who already want to complete setup can add it immediately
+- phone number becomes mandatory before accepting a match proposal
+- phone number should eventually be verified before exposing WhatsApp contact actions
+
+Registration request change:
+
+Add an optional field to the registration request:
+
+{
+  "email": "user@example.com",
+  "password": "secret",
+  "displayName": "Marco",
+  "phoneNumber": "+32470123456"
+}
+
+User persistence changes:
+- add phoneNumber column to users
+- store normalized E.164 format
+- add phoneNumberVerifiedAt column if phone verification is introduced
+
+Recommended validation:
+- accept only international format
+- normalize before storing
+- reject obviously invalid values
+- keep the field nullable
+
+Recommended profile behavior:
+- allow users to add or update phone number after registration
+- if verification is not implemented yet, store phoneNumber but keep a clear future path for phoneNumberVerifiedAt
+
+------------------------------------------------------------------------
+
+7. Accept Match Validation For Phone Number
+
+Before a user can accept a match proposal, the backend should verify that the current user has a usable phone number.
+
+Reason:
+If a user can accept without a phone number, the system may reach an accepted match state where one or both users cannot actually open a WhatsApp chat. That breaks the core product loop.
+
+Recommended rule:
+
+A user must have a phone number before accepting a match proposal.
+
+Future stronger rule:
+
+A user must have a verified phone number before accepting a match proposal.
+
+Validation location:
+- matching application service, inside the accept proposal use case
+- before changing the proposal status to ACCEPTED
+
+Suggested exception:
+
+PhoneNumberRequiredForMatchAcceptanceException
+
+Suggested API error:
+
+HTTP 409 Conflict or HTTP 422 Unprocessable Entity
+
+Recommended error code:
+
+PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE
+
+Recommended message:
+
+"Add your phone number before accepting this match proposal."
+
+Example error response:
+
+{
+  "code": "PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE",
+  "message": "Add your phone number before accepting this match proposal."
+}
+
+Mobile behavior:
+- catch this error code
+- navigate the user to the phone number setup screen
+- after successful phone number save, allow the user to retry accepting the match
+
+------------------------------------------------------------------------
+
+8. Expiration Behavior
+
+Match proposals should have an expiration timestamp.
+
+Recommended MVP expiration:
+- 24 or 48 hours after proposal creation
+
+Backend rules:
+- pending proposals cannot be accepted after expiresAt
+- expired proposals should not appear in active incoming proposals
+- contact-link endpoint must reject expired proposals unless status is already ACCEPTED and the product explicitly allows accepted matches to remain contactable
+
+Recommended product decision:
+- expiration applies while the proposal is pending
+- once both users accept, the accepted match can remain contactable
+
+This avoids a poor user experience where users accept in time but later lose the chat action immediately.
+
+------------------------------------------------------------------------
+
+9. Notification Changes
+
+Current notification module already supports matching notifications and routing metadata.
+
+Add a new notification type:
+
+MATCH_ACCEPTED
+
+Triggered when:
+- a proposal transitions to ACCEPTED
+
+Target users:
+- initiatorUserId
+- candidateUserId
+
+Suggested data:
+- matchId
+- targetScreen=match_detail
+- action=match_accepted
+
+The notification payload should not include:
+- WhatsApp URL
+- raw phone number
+- other sensitive contact data
+
+Reason:
+Push notifications can arrive late, be duplicated, be visible on lock screens, and be logged by device or provider systems. They should be navigation hints, not the source of truth.
+
+------------------------------------------------------------------------
+
+10. Data Model Changes
+
+User table:
+- phone_number nullable
+- phone_number_verified_at nullable, optional for MVP if verification is not implemented yet
+
+Match proposal table:
+- current model can keep status PROPOSED / ACCEPTED / DECLINED / EXPIRED / CANCELLED
+- if the product requires both users to independently accept a shared proposal, add per-user response columns instead of relying only on initiator/candidate roles
+
+Potential symmetric proposal fields:
+- user_a_id
+- user_b_id
+- user_a_response
+- user_b_response
+- status
+- accepted_at
+- expires_at
+
+For the current initiator/candidate model:
+- initiator consent is represented by proposal creation
+- candidate consent is represented by acceptance
+- status ACCEPTED means both required consents exist
+
+------------------------------------------------------------------------
+
+11. Service And Module Boundaries
+
+Auth module:
+- accepts optional phoneNumber during registration
+- passes it to the user module through CreateUserCommand
+
+User module:
+- owns phone number persistence
+- owns phone number normalization/validation helpers or delegates to a shared value object
+- exposes query/facade methods needed by matching to check phone number presence
+
+Matching module:
+- owns proposal acceptance rules
+- checks phone number requirement before accepting
+- publishes MATCH_ACCEPTED event after accepted transition
+- owns contact-link endpoint or delegates link creation to a small application service
+
+Notification module:
+- listens to the accepted match event
+- sends MATCH_ACCEPTED push notifications to both users
+- includes routing metadata only
+
+Mobile app:
+- handles registration optional phone field
+- handles phone-number-required error during match acceptance
+- opens match detail from notification
+- calls contact-link endpoint
+- opens WhatsApp
+
+------------------------------------------------------------------------
+
+12. Testing Checklist
+
+Registration:
+- registration succeeds without phoneNumber
+- registration succeeds with valid phoneNumber
+- registration rejects invalid phoneNumber format if validation is implemented
+- phoneNumber is stored normalized
+
+Accept match:
+- user without phoneNumber cannot accept
+- API returns PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE
+- user with phoneNumber can accept
+- expired proposal cannot be accepted
+- non-candidate cannot accept in the current initiator/candidate model
+
+Accepted match notification:
+- MATCH_ACCEPTED event is published exactly once when proposal becomes ACCEPTED
+- both users receive notification commands
+- notification data contains matchId and targetScreen
+- notification data does not contain WhatsApp URL or phone numbers
+
+Contact link:
+- authenticated match participant can request link
+- non-participant cannot request link
+- non-accepted match cannot return link
+- returned link points to the other user's phone number
+- missing other user phone number returns a clear error
+- raw phone number is not exposed outside the URL response
+
+------------------------------------------------------------------------
+
+13. MVP Recommendation
+
+Include this in the first release if WhatsApp chat is the core outcome of a successful match.
+
+Keep v1 simple:
+- optional phone number at registration
+- required phone number before accepting a match
+- accepted match notification to both users
+- authenticated contact-link endpoint
+- backend-generated WhatsApp URL
+- no WhatsApp URL in push payload
+- no short-lived tokens unless needed later
+
+This keeps the core product loop complete while avoiding unnecessary complexity.

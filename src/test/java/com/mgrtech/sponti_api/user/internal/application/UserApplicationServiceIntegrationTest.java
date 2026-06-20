@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.user.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
@@ -13,6 +14,7 @@ import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
+import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,9 @@ class UserApplicationServiceIntegrationTest {
 
     @Autowired
     UserPreferenceFacade userPreferenceFacade;
+
+    @Autowired
+    UserRepository userRepository;
 
     @BeforeEach
     void cleanDatabase() {
@@ -90,6 +95,110 @@ class UserApplicationServiceIntegrationTest {
         assertThat(matchingPreferences.get().quietHoursEnd()).isNull();
         assertThat(matchingPreferences.get().pushNotificationsEnabled()).isTrue();
         assertThat(matchingPreferences.get().suggestionNotificationsEnabled()).isTrue();
+    }
+
+    @Test
+    void create_user_persists_phone_number() {
+        final var phoneNumber = "+32987778844";
+        userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "test@email.com",
+                        "password-hash",
+                        "nickname",
+                        phoneNumber,
+                        "UTC"
+                )
+        );
+
+        assertThat(userRepository.existsByPhoneNumber(phoneNumber)).isTrue();
+    }
+
+    @Test
+    void create_user_persists_when_phone_number_null() {
+        var result = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "test@email.com",
+                        "password-hash",
+                        "nickname",
+                        null,
+                        "UTC"
+                )
+        );
+
+
+        var user = userRepository.findById(result.id());
+        assertThat(user).isPresent();
+        assertThat(user.get().getEmail()).isEqualTo("test@email.com");
+        assertThat(user.get().getPhoneNumber()).isNull();
+    }
+
+    @Test
+    void create_user_persists_when_empty_phone_number_is_normalized() {
+        var result = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "test@email.com",
+                        "password-hash",
+                        "nickname",
+                        "",
+                        "UTC"
+                )
+        );
+
+        var user = userRepository.findById(result.id());
+        assertThat(user).isPresent();
+        assertThat(user.get().getEmail()).isEqualTo("test@email.com");
+        assertThat(user.get().getPhoneNumber()).isNull();
+    }
+
+    @Test
+    void create_user_persists_multiple_users_with_null_phone_number() {
+        var result1 = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "user1@email.com",
+                        "password-hash",
+                        "nickname",
+                        "",
+                        "UTC"
+                )
+        );
+
+        var result2 = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "user2@email.com",
+                        "password-hash",
+                        "nickname",
+                        null,
+                        "UTC"
+                )
+        );
+
+        var user1 = userRepository.findById(result1.id());
+
+        assertThat(user1).isPresent();
+        assertThat(user1.get().getEmail()).isEqualTo("user1@email.com");
+        assertThat(user1.get().getPhoneNumber()).isNull();
+
+        var user2 = userRepository.findById(result2.id());
+        assertThat(user2).isPresent();
+        assertThat(user2.get().getEmail()).isEqualTo("user2@email.com");
+        assertThat(user2.get().getPhoneNumber()).isNull();
+    }
+
+    @Test
+    void create_user_rejects_duplicate_phone_number() {
+        userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash1",
+                        "John",
+                        "+32455786633",
+                        "UTC"
+                )
+        );
+
+        assertThatThrownBy(() -> userRegistrationFacade.createUser(
+                new CreateUserCommand(" another@example.com ", "hash2", "Other", "+32455786633", "UTC")
+        )).isInstanceOf(PhoneNumberAlreadyUsedException.class);
     }
 
     @Test
@@ -168,6 +277,71 @@ class UserApplicationServiceIntegrationTest {
         assertThat(updated.isPresent()).isTrue();
         assertThat(updated.get().displayName()).isEqualTo("new-display-name");
         assertThat(updated.get().timezone()).isEqualTo("Europe/Brussels");
+    }
+
+    @Test
+    void update_user_profile_with_phone_number() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        final var userId = created.id();
+
+        var persistedUser = userRepository.findById(userId);
+        assertThat(persistedUser.isPresent()).isTrue();
+        assertThat(persistedUser.get().getPhoneNumber()).isNull();
+
+        userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "new-display-name",
+                        "Europe/Brussels",
+                        "+32468009911")
+        );
+
+        var updated = userProfileQuery.getProfileById(created.id());
+
+        assertThat(updated.isPresent()).isTrue();
+        assertThat(updated.get().displayName()).isEqualTo("new-display-name");
+        assertThat(updated.get().timezone()).isEqualTo("Europe/Brussels");
+
+
+        persistedUser = userRepository.findById(updated.get().id());
+        assertThat(persistedUser.isPresent()).isTrue();
+        assertThat(persistedUser.get().getPhoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void update_user_profile_throws_conflict_error_if_phone_number_not_unique() {
+        userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "user1@example.com",
+                        "hash",
+                        "John",
+                        "+32468009911",
+                        "UTC"
+                )
+        );
+
+        var user2 = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "user2@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        assertThatThrownBy(() -> userFacade.updateProfile(user2.id(),
+                new UpdateUserCommand(
+                        "new-display-name",
+                        "Europe/Brussels",
+                        "+32468009911")
+        )).isInstanceOf(PhoneNumberAlreadyUsedException.class);
     }
 
     @Test

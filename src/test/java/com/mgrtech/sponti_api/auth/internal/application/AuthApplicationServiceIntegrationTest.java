@@ -9,6 +9,7 @@ import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void register_creates_user_and_returns_auth_tokens() {
         var result = authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         assertThat(result).isNotNull();
@@ -49,18 +50,18 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void register_rejects_duplicate_email_after_normalization() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         assertThatThrownBy(() -> authFacade.register(
-                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "UTC")
+                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "", "UTC")
         )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test
     void login_returns_auth_tokens_for_valid_credentials() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         var result = authFacade.login(
@@ -77,7 +78,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void login_normalizes_email() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         var result = authFacade.login(
@@ -99,7 +100,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void login_throws_bad_credentials_when_password_is_wrong() {
         authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         assertThatThrownBy(() -> authFacade.login(
@@ -110,7 +111,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void refresh_rotates_refresh_token_and_returns_new_access_token() {
         var registered = authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
 
         var refreshed = authFacade.refresh(registered.refreshToken());
@@ -127,7 +128,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void logout_revokes_all_user_refresh_tokens() {
         var registered = authFacade.register(
-                new RegisterCommand("john@example.com", "password", "John", "UTC")
+                getRegistrationCommand()
         );
         var loggedIn = authFacade.login(
                 new LoginCommand("john@example.com", "password")
@@ -140,5 +141,9 @@ class AuthApplicationServiceIntegrationTest {
                 .isInstanceOf(InvalidRefreshTokenException.class);
         assertThatThrownBy(() -> authFacade.refresh(loggedIn.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    private static @NonNull RegisterCommand getRegistrationCommand() {
+        return new RegisterCommand("john@example.com", "password", "John", "", "UTC");
     }
 }

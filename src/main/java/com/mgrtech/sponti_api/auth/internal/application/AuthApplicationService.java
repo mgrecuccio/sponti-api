@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 
 @Service
@@ -67,6 +68,7 @@ class AuthApplicationService implements AuthFacade {
                         normalizedEmail,
                         passwordHash,
                         command.displayName(),
+                        blankToNull(command.phoneNumber()),
                         command.timezone()
                 )
         );
