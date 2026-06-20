@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.user.internal.web;
 
+import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalTime;
 
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
+
 @RestController
 @RequestMapping("/api/v1/users")
 @SecurityRequirement(name = "bearerAuth")
@@ -42,7 +45,12 @@ public class UserController {
             @Valid @RequestBody UpdateProfileRequest request
     ) {
         var userId = extractUserId(authentication);
-        return userFacade.updateProfile(userId, new UpdateUserCommand(request.displayName, request.timezone));
+        return userFacade.updateProfile(userId, new UpdateUserCommand(
+                    request.displayName,
+                    request.timezone,
+                    blankToNull(request.phoneNumber)
+                )
+        );
     }
 
     @GetMapping("/me")
@@ -90,7 +98,9 @@ public class UserController {
     @Schema(description = "Request to update the user profile")
     record UpdateProfileRequest(
             @Schema(example = "New display name") @NotBlank String displayName,
-            @Schema(example = "Europe/Brussels") @NotBlank String timezone) {
+            @Schema(example = "Europe/Brussels") @NotBlank String timezone,
+            @Schema(example = "+32468009911") @ValidE164PhoneNumber String phoneNumber
+    ) {
     }
 
     @Schema(description = "Request to update user preferences")

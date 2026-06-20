@@ -81,17 +81,21 @@ class UserControllerTest {
     void update_returns_user_profile() throws Exception {
         var request = new UserController.UpdateProfileRequest(
                 "new displayName",
-                "UTC"
+                "UTC",
+                "+32468009911"
         );
 
-        when(userFacade.updateProfile(42L, new UpdateUserCommand(request.displayName(), request.timezone())))
-                .thenReturn(new UserProfileView(
+        when(userFacade.updateProfile(42L, new UpdateUserCommand(
+                request.displayName(),
+                request.timezone(),
+                request.phoneNumber()
+        ))).thenReturn(new UserProfileView(
                         42L,
                         "email@test.com",
                         request.displayName(),
                         "ACTIVE",
                         request.timezone()
-                ));
+            ));
 
         mockMvc.perform(put("/api/v1/users/me")
                 .principal(new TestingAuthenticationToken("42", null))
@@ -105,8 +109,40 @@ class UserControllerTest {
     }
 
     @Test
+    void update_returns_user_profile_even_when_phone_number_missing() throws Exception {
+        var request = new UserController.UpdateProfileRequest(
+                "new displayName",
+                "UTC",
+                ""
+        );
+
+        when(userFacade.updateProfile(42L, new UpdateUserCommand(
+                request.displayName(),
+                request.timezone(),
+                null
+        ))).thenReturn(new UserProfileView(
+                42L,
+                "email@test.com",
+                request.displayName(),
+                "ACTIVE",
+                request.timezone()
+        ));
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(jsonPath("$.id").value(42L))
+                .andExpect(jsonPath("$.email").value("email@test.com"))
+                .andExpect(jsonPath("$.displayName").value(request.displayName()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.timezone").value(request.timezone()));
+    }
+
+    @Test
     void update_returns_400_when_invalid_request() throws Exception {
         var request = new UserController.UpdateProfileRequest(
+                "",
                 "",
                 ""
         );

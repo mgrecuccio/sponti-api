@@ -25,7 +25,7 @@ public class UserEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone_number", unique = true)
+    @Column(name = "phone_number", unique = true, length = 16)
     private String phoneNumber;
 
     @Column(name = "phone_number_verified", nullable = false)
@@ -62,11 +62,13 @@ public class UserEntity {
             String email,
             String passwordHash,
             String displayName,
+            String phoneNumber,
             String timezone
     ) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.displayName = displayName;
+        this.phoneNumber = phoneNumber;
         this.timezone = timezone;
     }
 
@@ -74,9 +76,14 @@ public class UserEntity {
         return status.name();
     }
 
-    public void update(String displayName, String timezone) {
+    public void update(
+            String displayName,
+            String timezone,
+            String phoneNumber
+    ) {
         this.displayName = displayName;
         this.timezone = timezone;
+        this.phoneNumber = phoneNumber;
     }
 
     public static UserCredentialsView toCredentialsView(UserEntity user) {
