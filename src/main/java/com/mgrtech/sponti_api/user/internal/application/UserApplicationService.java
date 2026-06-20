@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
@@ -30,8 +31,10 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
+import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.toProfileView;
 import static com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity.toMatchingPreferencesView;
 
 @Service
@@ -104,10 +107,16 @@ public class UserApplicationService implements
             throw new EmailAlreadyUsedException("Email already used");
         }
 
+        if(command.phoneNumber() != null && userRepository.existsByPhoneNumber(command.phoneNumber())) {
+            log.warn("Registration blocked: phoneNumber={} already exists", command.phoneNumber());
+            throw new PhoneNumberAlreadyUsedException("Phone number already used");
+        }
+
         var user = new UserEntity(
                 normalizedEmail,
                 command.passwordHash(),
                 command.displayName(),
+                blankToNull(command.phoneNumber()),
                 command.timezone()
         );
 
@@ -131,9 +140,14 @@ public class UserApplicationService implements
         var user = userRepository.findById(userId)
                         .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
 
-        user.update(command.displayName(), command.timezone());
+        if(command.phoneNumber() != null && userRepository.existsByPhoneNumber(command.phoneNumber())) {
+            log.warn("Profile update blocked: phoneNumber={} already exists", command.phoneNumber());
+            throw new PhoneNumberAlreadyUsedException("Phone number already used");
+        }
+
+        user.update(command.displayName(), command.timezone(), command.phoneNumber());
         log.info("UserId={} updated.", userId);
-        return UserEntity.toProfileView(user);
+        return toProfileView(user);
     }
 
     @Override

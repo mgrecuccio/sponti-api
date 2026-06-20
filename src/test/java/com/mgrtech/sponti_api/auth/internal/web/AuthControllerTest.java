@@ -44,6 +44,7 @@ class AuthControllerTest {
                 "john@example.com",
                 "password",
                 "nickname",
+                "+32468009911",
                 "UTC"
         );
 
@@ -52,6 +53,7 @@ class AuthControllerTest {
                         request.email(),
                         request.password(),
                         request.displayName(),
+                        request.phoneNumber(),
                         request.timezone()
                 )))
                 .willReturn(new AuthTokens(
@@ -74,6 +76,7 @@ class AuthControllerTest {
                 "invalid-email",
                 "password",
                 "nickname",
+                "+32468009911",
                 "UTC"
         );
 
@@ -82,6 +85,71 @@ class AuthControllerTest {
                         request.email(),
                         request.password(),
                         request.displayName(),
+                        request.phoneNumber(),
+                        request.timezone()
+                )))
+                .willReturn(new AuthTokens(
+                        "access-token",
+                        "refresh-token",
+                        "access",
+                        0
+                ));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void registers_user_and_returns_auth_tokens_when_phone_number_is_missing() throws Exception {
+        var request = new AuthController.RegisterRequest(
+                "john@example.com",
+                "password",
+                "nickname",
+                "",
+                "UTC"
+        );
+
+        given(authFacade.register(
+                new RegisterCommand(
+                        request.email(),
+                        request.password(),
+                        request.displayName(),
+                        request.phoneNumber(),
+                        request.timezone()
+                )))
+                .willReturn(new AuthTokens(
+                        "access-token",
+                        "refresh-token",
+                        "access",
+                        0
+                ));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accessToken").value("access-token"));
+    }
+
+    @Test
+    void register_returns_bad_request_if_phone_number_is_invalid() throws Exception {
+        var request = new AuthController.RegisterRequest(
+                "invalid-email",
+                "password",
+                "nickname",
+                "+3246",
+                "UTC"
+        );
+
+        given(authFacade.register(
+                new RegisterCommand(
+                        request.email(),
+                        request.password(),
+                        request.displayName(),
+                        request.phoneNumber(),
                         request.timezone()
                 )))
                 .willReturn(new AuthTokens(
