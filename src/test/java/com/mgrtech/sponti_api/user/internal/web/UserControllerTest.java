@@ -3,11 +3,13 @@ package com.mgrtech.sponti_api.user.internal.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
+import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
@@ -56,21 +58,22 @@ class UserControllerTest {
 
     @Test
     void returns_profile_for_authenticated_user() throws Exception {
-        given(userProfileQuery.getProfileById(42L))
-                .willReturn(Optional.of(new UserProfileView(
-                        42L, "john@example.com", "John", "ACTIVE", "utc"
-                )));
+        given(userFacade.getCurrentUserProfile(42L))
+                .willReturn(new UserPrivateProfileView(
+                        42L, "john@example.com", "+32468009911", "John", "ACTIVE", "utc"
+                ));
 
         mockMvc.perform(get("/api/v1/users/me")
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("john@example.com"));
+                .andExpect(jsonPath("$.email").value("john@example.com"))
+                .andExpect(jsonPath("$.phoneNumber").value("+32468009911"));
     }
 
     @Test
-    void returns_not_found_when_facade_returns_empty() throws Exception {
-        given(userProfileQuery.getProfileById(42L))
-                .willReturn(Optional.empty());
+    void returns_not_found_when_facade_throws_user_not_found() throws Exception {
+        given(userFacade.getCurrentUserProfile(42L))
+                .willThrow(new UserNotFoundException("Authenticated user not found"));
 
         mockMvc.perform(get("/api/v1/users/me")
                         .principal(new TestingAuthenticationToken("42", null)))

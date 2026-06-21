@@ -8,6 +8,7 @@ import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
@@ -55,9 +56,8 @@ public class UserController {
 
     @GetMapping("/me")
     @Operation(summary = "Get the profile of an authenticated user")
-    UserProfileView me(Authentication authentication) {
-        return userProfileQuery.getProfileById(extractUserId(authentication))
-                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
+    UserPrivateProfileView me(Authentication authentication) {
+        return userFacade.getCurrentUserProfile(extractUserId(authentication));
     }
 
     @PutMapping("/preferences")

@@ -1,9 +1,6 @@
 package com.mgrtech.sponti_api.user.internal.domain;
 
-import com.mgrtech.sponti_api.user.api.view.UserCredentialsView;
-import com.mgrtech.sponti_api.user.api.view.UserLookupView;
-import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
-import com.mgrtech.sponti_api.user.api.view.UserProfileView;
+import com.mgrtech.sponti_api.user.api.view.*;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -98,6 +95,17 @@ public class UserEntity {
         return new UserProfileView(
                 user.getId(),
                 user.getEmail(),
+                user.getDisplayName(),
+                user.getStatusAsString(),
+                user.getTimezone()
+        );
+    }
+
+    public static UserPrivateProfileView toPrivateProfileView(UserEntity user) {
+        return new UserPrivateProfileView(
+                user.getId(),
+                user.getEmail(),
+                user.getPhoneNumber(),
                 user.getDisplayName(),
                 user.getStatusAsString(),
                 user.getTimezone()
