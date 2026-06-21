@@ -33,6 +33,10 @@ public class OperationalMetrics {
         counter("sponti.match.proposals.responses", "outcome", outcome);
     }
 
+    public void contactLinkCreated(String type) {
+        counter("sponti.contact.link.created", "type", type);
+    }
+
     public void notificationDeliveryFailure(String notificationType, String failureType) {
         meterRegistry.counter(
                 "sponti.notification.delivery.failures",

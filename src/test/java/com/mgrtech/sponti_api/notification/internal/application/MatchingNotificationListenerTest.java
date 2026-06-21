@@ -46,6 +46,7 @@ class MatchingNotificationListenerTest {
                             .containsEntry("initiatorUserId", "1")
                             .containsEntry("channelType", "CHAT")
                             .containsEntry("targetScreen", "incoming_matches");
+                    assertNoSensitiveContactPayload(command);
                 });
     }
 
@@ -71,6 +72,7 @@ class MatchingNotificationListenerTest {
                             .containsEntry("candidateUserId", "2")
                             .containsEntry("targetScreen", "match_detail")
                             .containsEntry("action", "match_accepted");
+                    assertNoSensitiveContactPayload(command);
                 });
     }
 
@@ -97,6 +99,17 @@ class MatchingNotificationListenerTest {
                             .containsEntry("candidateUserIds", "3,4")
                             .containsEntry("suggestionFingerprint", "3,4")
                             .containsEntry("bestScore", "120");
+                    assertNoSensitiveContactPayload(command);
                 });
+    }
+
+    private void assertNoSensitiveContactPayload(SendNotificationCommand command) {
+        assertThat(command.data()).doesNotContainKeys(
+                "phoneNumber",
+                "rawPhoneNumber",
+                "whatsappUrl",
+                "whatsAppUrl",
+                "url"
+        );
     }
 }
