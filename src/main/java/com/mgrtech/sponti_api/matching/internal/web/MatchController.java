@@ -46,6 +46,13 @@ class MatchController {
         return matchingFacade.getIncomingMatches(userId);
     }
 
+    @GetMapping("/accepted")
+    @Operation(summary = "List accepted match invitations", description = "Mobile accepted matches screen. Returns accepted match proposals where the authenticated user is a participant.")
+    public List<MatchInvitationView> accepted(Authentication authentication) {
+        var userId = extractUserId(authentication);
+        return matchingFacade.getAcceptedMatches(userId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create match proposal", description = "Create a match proposal for an accepted contact and communication channel.")

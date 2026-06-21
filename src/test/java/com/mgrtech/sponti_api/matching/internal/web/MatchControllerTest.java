@@ -97,6 +97,32 @@ public class MatchControllerTest {
     }
 
     @Test
+    void return_accepted_matches_for_authenticated_user() throws Exception {
+        given(matchingFacade.getAcceptedMatches(42L))
+                .willReturn(List.of(new MatchInvitationView(
+                        99L,
+                        11L,
+                        null,
+                        ChannelType.CHAT,
+                        "ACCEPTED",
+                        188,
+                        Instant.parse("2026-03-30T09:00:00Z"),
+                        Instant.parse("2026-03-30T10:00:00Z"),
+                        Instant.parse("2026-03-30T08:00:00Z"),
+                        Instant.parse("2026-03-30T09:30:00Z")
+                )));
+
+        mockMvc.perform(get("/api/v1/matches/accepted")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(99L))
+                .andExpect(jsonPath("$[0].initiatorUserId").value(11L))
+                .andExpect(jsonPath("$[0].channelType").value("CHAT"))
+                .andExpect(jsonPath("$[0].status").value("ACCEPTED"))
+                .andExpect(jsonPath("$[0].respondedAt").value("2026-03-30T09:30:00Z"));
+    }
+
+    @Test
     void create_match_and_returns_match_view() throws Exception {
         given(matchingFacade
                 .createMatch(42L, new CreateMatchCommand(11L, ChannelType.CHAT)))
