@@ -13,18 +13,33 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
 
     Optional<MatchProposalEntity> findByIdAndCandidateUserId(Long id, Long candidateUserId);
 
+    /**
+     * Finds matches visible to a user for a specific status.
+     * Incoming proposals pass includeInitiated=false and requireUnexpired=true, so only active proposals
+     * where the user is the candidate are returned. Accepted matches pass includeInitiated=true and
+     * requireUnexpired=false, so either participant can see accepted matches after proposal expiry.
+     */
     @Query("""
             SELECT proposal
             FROM MatchProposalEntity proposal
-            WHERE proposal.candidateUserId = :candidateUserId
-              AND proposal.status = :status
-              AND (proposal.expiresAt IS NULL OR proposal.expiresAt > :now)
+            WHERE proposal.status = :status
+              AND (
+                    proposal.candidateUserId = :userId
+                    OR (:includeInitiated = true AND proposal.initiatorUserId = :userId)
+                  )
+              AND (
+                    :requireUnexpired = false
+                    OR proposal.expiresAt IS NULL
+                    OR proposal.expiresAt > :now
+                  )
             ORDER BY proposal.createdAt DESC
             """)
-    List<MatchProposalEntity> findActiveIncoming(
-            Long candidateUserId,
+    List<MatchProposalEntity> findVisibleByUserIdAndStatus(
+            Long userId,
             MatchProposalStatus status,
-            Instant now
+            Instant now,
+            boolean includeInitiated,
+            boolean requireUnexpired
     );
 
     @Query("""

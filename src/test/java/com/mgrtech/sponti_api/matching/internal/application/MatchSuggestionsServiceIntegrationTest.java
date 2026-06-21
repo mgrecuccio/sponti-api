@@ -576,6 +576,67 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name()));
     }
 
+    @Test
+    void get_accepted_matches_returns_accepted_matches_for_either_participant() {
+        var user = createUser("accepted-user", "Accepted User");
+        var candidate = createUser("accepted-candidate", "Accepted Candidate");
+        var initiator = createUser("accepted-initiator", "Accepted Initiator");
+        var unrelatedUser = createUser("accepted-unrelated", "Accepted Unrelated");
+        var unrelatedCandidate = createUser("accepted-unrelated-candidate", "Accepted Unrelated Candidate");
+
+        var initiatedByUser = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                user.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+        initiatedByUser.acceptBy(candidate.id());
+        matchProposalRepository.saveAndFlush(initiatedByUser);
+
+        var initiatedByOtherUser = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                user.id(),
+                ChannelType.CALL,
+                80,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T09:45:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+        initiatedByOtherUser.acceptBy(user.id());
+        matchProposalRepository.saveAndFlush(initiatedByOtherUser);
+
+        matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                user.id(),
+                unrelatedCandidate.id(),
+                ChannelType.CHAT,
+                70,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z")
+        ));
+
+        var unrelatedAccepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                unrelatedUser.id(),
+                unrelatedCandidate.id(),
+                ChannelType.CHAT,
+                60,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z")
+        ));
+        unrelatedAccepted.acceptBy(unrelatedCandidate.id());
+        matchProposalRepository.saveAndFlush(unrelatedAccepted);
+
+        var matches = matchingFacade.getAcceptedMatches(user.id());
+
+        assertThat(matches)
+                .extracting(MatchInvitationView::id)
+                .containsExactlyInAnyOrder(initiatedByUser.getId(), initiatedByOtherUser.getId());
+        assertThat(matches)
+                .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.ACCEPTED.name()));
+    }
+
     private CreatedUserView createUser(String emailPrefix, String displayName) {
         return createUser(emailPrefix, displayName, nextPhoneNumber());
     }

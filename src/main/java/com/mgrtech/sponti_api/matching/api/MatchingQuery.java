@@ -7,4 +7,6 @@ public interface MatchingQuery {
     List<SuggestedMatchView> getSuggestions(Long userId);
 
     List<MatchInvitationView> getIncomingMatches(Long userId);
+
+    List<MatchInvitationView> getAcceptedMatches(Long userId);
 }
