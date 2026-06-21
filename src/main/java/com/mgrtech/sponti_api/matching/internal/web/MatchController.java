@@ -1,11 +1,12 @@
 package com.mgrtech.sponti_api.matching.internal.web;
 
-import com.mgrtech.sponti_api.matching.internal.application.MatchingFacade;
-import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
+import com.mgrtech.sponti_api.matching.api.ContactLinkView;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
-import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
+import com.mgrtech.sponti_api.matching.internal.application.MatchingFacade;
+import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
+import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -71,6 +72,14 @@ class MatchController {
     public MatchView declineMatch(Authentication authentication, @PathVariable("id") Long proposalId) {
         var candidateUserId = extractUserId(authentication);
         return matchingFacade.declineMatch(candidateUserId, proposalId);
+    }
+
+    @PostMapping("/{matchId}/contact-link")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Trigger the contact link", description = "User receives the WhatsApp contact link to start a chat.")
+    public ContactLinkView contactLink(Authentication authentication, @PathVariable Long matchId) {
+        var userId = extractUserId(authentication);
+        return matchingFacade.createContactLink(matchId, userId);
     }
 
     private Long extractUserId(Authentication authentication) {

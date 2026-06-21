@@ -384,16 +384,16 @@ Useful commands:
 
 ---
 
-### Phase 7 — WhatsApp Link Generation
+### Phase 7 — WhatsApp Link Generation ✅
 
 * [x] Optional phone number during registration
 * [x] Phone number update through user profile
 * [x] Require User A phone number before creating a match proposal
 * [x] Require User B phone number before accepting a match proposal
 * [x] Accepted match notification to User A after User B accepts
-* [ ] Authenticated contact-link endpoint
-* [ ] Backend-generated WhatsApp `wa.me` URL for the other participant
-* [ ] No raw phone number or WhatsApp URL in push notification payloads
+* [x] Authenticated contact-link endpoint
+* [x] Backend-generated WhatsApp `wa.me` URL for the other participant
+* [x] No raw phone number or WhatsApp URL in push notification payloads
 
 ---
 

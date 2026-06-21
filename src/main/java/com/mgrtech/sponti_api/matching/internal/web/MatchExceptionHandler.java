@@ -31,6 +31,13 @@ public class MatchExceptionHandler {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, ApiErrorCode.PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(UserNotBelongsMatchException.class)
+    ProblemDetail handleUserDoesNotBelongToMatch(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.FORBIDDEN.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.FORBIDDEN, ApiErrorCode.USER_DOES_NOT_BELONG_TO_MATCH, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(ChannelNotAllowedException.class)
     ProblemDetail handleChannelNotAllowed(Exception ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",
