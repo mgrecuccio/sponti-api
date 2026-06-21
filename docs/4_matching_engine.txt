@@ -89,6 +89,8 @@ The important ownership rule is:
 
 The initiator must not accept or decline their own outgoing proposal.
 
+Match proposal uniqueness is pair-based, not direction-based. Once User A has an active or accepted proposal with User B, User B must not be allowed to create a second proposal back to User A.
+
 ------------------------------------------------------------------------
 
 3. Generic Flow
@@ -103,7 +105,7 @@ The backend computes suggestions for the authenticated user by checking:
 - matching preferences
 - effective availability
 - channel compatibility
-- existing active proposals
+- existing active or accepted proposals in either direction
 - recent matching history
 - score threshold
 
@@ -461,6 +463,8 @@ Incoming matches should not return expired proposals.
 
 A future cleanup process can mark old PROPOSED rows as EXPIRED.
 
+Expired PROPOSED proposals do not block a future proposal for the same pair. ACCEPTED proposals do block future proposals for the same pair because the users are already matched.
+
 ------------------------------------------------------------------------
 
 11. Error Behavior
@@ -473,7 +477,7 @@ Examples:
 - requested channel is not allowed by both users
 - no valid availability overlap exists
 - candidate score is below configured minimum
-- a proposed match already exists for the pair
+- an active or accepted match already exists for the pair in either direction
 - match proposal does not belong to the authenticated candidate
 - proposal is no longer in PROPOSED status
 

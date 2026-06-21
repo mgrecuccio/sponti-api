@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.notification.internal.application;
 
+import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalCreatedEvent;
 import com.mgrtech.sponti_api.matching.api.event.MatchSuggestionsAvailableEvent;
 import com.mgrtech.sponti_api.notification.api.NotificationFacade;
@@ -31,6 +32,22 @@ class MatchingNotificationListener {
                         "initiatorUserId", event.initiatorUserId().toString(),
                         "channelType", event.channelType().name(),
                         "targetScreen", "incoming_matches"
+                )
+        ));
+    }
+
+    @EventListener
+    void on(MatchProposalAcceptedEvent event) {
+        notificationFacade.send(new SendNotificationCommand(
+                event.initiatorUserId(),
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                "It's a match",
+                "Open WhatsApp to start chatting.",
+                Map.of(
+                        "matchId", event.matchId().toString(),
+                        "candidateUserId", event.candidateUserId().toString(),
+                        "targetScreen", "match_detail",
+                        "action", "match_accepted"
                 )
         ));
     }

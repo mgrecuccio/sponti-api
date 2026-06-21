@@ -27,10 +27,27 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
             Instant now
     );
 
-    boolean existsByInitiatorUserIdAndCandidateUserIdAndStatus(
-            Long initiatorUserId,
+    @Query("""
+            SELECT CASE WHEN COUNT(proposal) > 0 THEN true ELSE false END
+            FROM MatchProposalEntity proposal
+            WHERE (
+                    (proposal.initiatorUserId = :userId AND proposal.candidateUserId = :candidateUserId)
+                    OR (proposal.initiatorUserId = :candidateUserId AND proposal.candidateUserId = :userId)
+                  )
+              AND (
+                    proposal.status = :acceptedStatus
+                    OR (
+                        proposal.status = :proposedStatus
+                        AND (proposal.expiresAt IS NULL OR proposal.expiresAt > :now)
+                    )
+                  )
+            """)
+    boolean existsBlockingProposalBetweenUsers(
+            Long userId,
             Long candidateUserId,
-            MatchProposalStatus status
+            MatchProposalStatus proposedStatus,
+            MatchProposalStatus acceptedStatus,
+            Instant now
     );
 
     Optional<MatchProposalEntity> findFirstByInitiatorUserIdAndCandidateUserIdAndStatusOrderByRespondedAtDesc(

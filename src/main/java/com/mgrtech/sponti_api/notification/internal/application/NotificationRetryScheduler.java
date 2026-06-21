@@ -107,6 +107,7 @@ class NotificationRetryScheduler {
     private String titleFor(NotificationType type) {
         return switch (type) {
             case MATCH_PROPOSAL_CREATED -> "New match invitation";
+            case MATCH_PROPOSAL_ACCEPTED -> "It's a match";
             case MATCH_SUGGESTIONS_AVAILABLE -> "New suggestions available";
         };
     }
@@ -114,6 +115,7 @@ class NotificationRetryScheduler {
     private String bodyFor(NotificationType type) {
         return switch (type) {
             case MATCH_PROPOSAL_CREATED -> "Someone wants to connect now.";
+            case MATCH_PROPOSAL_ACCEPTED -> "Open WhatsApp to start chatting.";
             case MATCH_SUGGESTIONS_AVAILABLE -> "There may be useful suggestions available now.";
         };
     }
