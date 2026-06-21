@@ -16,6 +16,7 @@ import com.mgrtech.sponti_api.matching.internal.exception.*;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import lombok.AllArgsConstructor;
@@ -47,6 +48,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     private final EffectiveAvailabilityQuery effectiveAvailabilityQuery;
     private final ContactQuery contactQuery;
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
+    private final UserContactInfoQuery userContactInfoQuery;
     private final MatchProposalRepository repository;
     private final ApplicationEventPublisher eventPublisher;
     private final OperationalMetrics metrics;
@@ -60,6 +62,10 @@ public class MatchSuggestionsService implements MatchingFacade {
         var requestedChannel = command.channelType();
 
         log.info("Creating match between initiatorId={} and candidateId={}", userId, candidateUserId);
+
+        if(!userContactInfoQuery.hasPhoneNumber(userId)) {
+            throw new PhoneNumberRequiredException("Phone number required for creating a match.");
+        }
 
         var contact = contactQuery.findAcceptedContact(userId, candidateUserId)
                 .orElseThrow(() -> new AcceptedContactNotFoundException("Candidate is not an accepted contact."));
@@ -139,7 +145,13 @@ public class MatchSuggestionsService implements MatchingFacade {
                 .orElseThrow(
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
+
         ensureNotExpired(proposal, now);
+
+        if(!userContactInfoQuery.hasPhoneNumber(candidateUserId)) {
+            throw new PhoneNumberRequiredException("Phone number required for accepting a match.");
+        }
+
         proposal.acceptBy(candidateUserId);
         metrics.matchProposalResponded("accepted");
         log.info("Proposal id = {} accepted by candidate user id = {}", proposal.getId(), candidateUserId);

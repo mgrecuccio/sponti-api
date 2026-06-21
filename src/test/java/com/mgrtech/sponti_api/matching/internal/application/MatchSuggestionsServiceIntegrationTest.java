@@ -68,9 +68,12 @@ public class MatchSuggestionsServiceIntegrationTest {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
+    private int phoneNumberSequence;
+
     @BeforeEach
     void cleanDatabase() {
         databaseCleaner.clean();
+        phoneNumberSequence = 1;
     }
 
     @Test
@@ -241,6 +244,21 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
+    void create_match_fails_when_initiator_has_no_phone_number() {
+        var initiator = createUserWithoutPhoneNumber("no-phone-initiator", "No Phone Initiator");
+        var candidate = createUser("no-phone-candidate", "No Phone Candidate");
+        createAcceptedContact(initiator.id(), candidate, false);
+
+        assertThatThrownBy(() -> matchingFacade.createMatch(
+                initiator.id(),
+                new CreateMatchCommand(candidate.id(), ChannelType.CHAT)
+        )).isInstanceOf(PhoneNumberRequiredException.class)
+          .hasMessage("Phone number required for creating a match.");
+
+        assertThat(matchProposalRepository.findAll()).isEmpty();
+    }
+
+    @Test
     void create_match_fails_when_active_proposal_already_exists() {
         var initiator = createUser("duplicate-match-initiator", "Duplicate Match Initiator");
         var candidate = createUser("duplicate-match-candidate", "Duplicate Match Candidate");
@@ -318,6 +336,27 @@ public class MatchSuggestionsServiceIntegrationTest {
 
         assertThat(matchProposalRepository.findById(suggestion.getId()))
                 .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.ACCEPTED));
+    }
+
+    @Test
+    void accept_match_fails_when_candidate_has_no_phone_number() {
+        var initiator = createUser("accept-no-phone-initiator", "Accept No Phone Initiator");
+        var candidate = createUserWithoutPhoneNumber("accept-no-phone-candidate", "Accept No Phone Candidate");
+        var suggestion = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z")
+        ));
+
+        assertThatThrownBy(() -> matchingFacade.acceptMatch(candidate.id(), suggestion.getId()))
+                .isInstanceOf(PhoneNumberRequiredException.class)
+                .hasMessage("Phone number required for accepting a match.");
+
+        assertThat(matchProposalRepository.findById(suggestion.getId()))
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
     }
 
     @Test
@@ -545,14 +584,27 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     private CreatedUserView createUser(String emailPrefix, String displayName) {
+        return createUser(emailPrefix, displayName, nextPhoneNumber());
+    }
+
+    private CreatedUserView createUserWithoutPhoneNumber(String emailPrefix, String displayName) {
+        return createUser(emailPrefix, displayName, null);
+    }
+
+    private CreatedUserView createUser(String emailPrefix, String displayName, String phoneNumber) {
         return userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         emailPrefix + "@example.com",
                         "hash",
                         displayName,
+                        phoneNumber,
                         "UTC"
                 )
         );
+    }
+
+    private String nextPhoneNumber() {
+        return "+32470" + String.format("%06d", phoneNumberSequence++);
     }
 
     private void createAcceptedContact(Long initiatorId, CreatedUserView contact, boolean favorite) {

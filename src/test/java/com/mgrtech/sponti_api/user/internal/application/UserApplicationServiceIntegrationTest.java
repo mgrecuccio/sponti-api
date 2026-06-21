@@ -10,6 +10,7 @@ import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
@@ -35,6 +36,9 @@ class UserApplicationServiceIntegrationTest {
 
     @Autowired
     UserMatchingPreferencesQuery userMatchingPreferencesQuery;
+
+    @Autowired
+    UserContactInfoQuery userContactInfoQuery;
 
     @Autowired
     UserCredentialsQuery userCredentialsQuery;
@@ -100,7 +104,7 @@ class UserApplicationServiceIntegrationTest {
     @Test
     void create_user_persists_phone_number() {
         final var phoneNumber = "+32987778844";
-        userRegistrationFacade.createUser(
+        var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "test@email.com",
                         "password-hash",
@@ -111,6 +115,13 @@ class UserApplicationServiceIntegrationTest {
         );
 
         assertThat(userRepository.existsByPhoneNumber(phoneNumber)).isTrue();
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.email()).isEqualTo("test@email.com");
+        assertThat(privateProfile.phoneNumber()).isEqualTo(phoneNumber);
+
+        assertThat(userContactInfoQuery.hasPhoneNumber(created.id())).isTrue();
+        assertThat(userContactInfoQuery.getPhoneNumber(created.id())).contains(phoneNumber);
     }
 
     @Test
@@ -130,6 +141,8 @@ class UserApplicationServiceIntegrationTest {
         assertThat(user).isPresent();
         assertThat(user.get().getEmail()).isEqualTo("test@email.com");
         assertThat(user.get().getPhoneNumber()).isNull();
+        assertThat(userContactInfoQuery.hasPhoneNumber(result.id())).isFalse();
+        assertThat(userContactInfoQuery.getPhoneNumber(result.id())).isEmpty();
     }
 
     @Test
@@ -313,6 +326,64 @@ class UserApplicationServiceIntegrationTest {
         persistedUser = userRepository.findById(updated.get().id());
         assertThat(persistedUser.isPresent()).isTrue();
         assertThat(persistedUser.get().getPhoneNumber()).isEqualTo("+32468009911");
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void update_user_profile_allows_keeping_same_phone_number() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "+32468009911",
+                        "UTC"
+                )
+        );
+
+        userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "John Updated",
+                        "Europe/Brussels",
+                        "+32468009911")
+        );
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.displayName()).isEqualTo("John Updated");
+        assertThat(privateProfile.timezone()).isEqualTo("Europe/Brussels");
+        assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void update_user_profile_normalizes_empty_phone_number_to_null() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "+32468009911",
+                        "UTC"
+                )
+        );
+
+        userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "John Updated",
+                        "Europe/Brussels",
+                        "")
+        );
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.phoneNumber()).isNull();
+    }
+
+    @Test
+    void get_current_user_profile_fails_if_user_not_found() {
+        assertThatThrownBy(() -> userFacade.getCurrentUserProfile(11L))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessage("Authenticated user not found");
     }
 
     @Test

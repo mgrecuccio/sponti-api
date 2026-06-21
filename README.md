@@ -384,7 +384,20 @@ Useful commands:
 
 ---
 
-### Phase 7 — Production Readiness
+### Phase 7 — WhatsApp Link Generation
+
+* [x] Optional phone number during registration
+* [x] Phone number update through user profile
+* [x] Require User A phone number before creating a match proposal
+* [x] Require User B phone number before accepting a match proposal
+* [ ] Accepted match notification to both users
+* [ ] Authenticated contact-link endpoint
+* [ ] Backend-generated WhatsApp `wa.me` URL for the other participant
+* [ ] No raw phone number or WhatsApp URL in push notification payloads
+
+---
+
+### Phase 8 — Production Readiness
 
 * [ ] CI/CD pipeline
 * [x] Observability (logs/metrics)

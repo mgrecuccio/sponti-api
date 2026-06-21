@@ -24,6 +24,13 @@ public class MatchExceptionHandler {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, ApiErrorCode.MATCHING_DISABLED, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(PhoneNumberRequiredException.class)
+    ProblemDetail handlePhoneNumberRequired(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.UNPROCESSABLE_CONTENT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, ApiErrorCode.PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(ChannelNotAllowedException.class)
     ProblemDetail handleChannelNotAllowed(Exception ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",

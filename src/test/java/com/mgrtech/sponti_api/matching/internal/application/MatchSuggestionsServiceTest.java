@@ -15,9 +15,11 @@ import com.mgrtech.sponti_api.matching.internal.exception.ChannelNotAllowedExcep
 import com.mgrtech.sponti_api.matching.internal.exception.MatchAlreadyExistsException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
+import com.mgrtech.sponti_api.matching.internal.exception.PhoneNumberRequiredException;
 import com.mgrtech.sponti_api.matching.internal.repository.MatchProposalRepository;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -52,6 +54,7 @@ class MatchSuggestionsServiceTest {
     private final EffectiveAvailabilityQuery effectiveAvailabilityQuery = mock(EffectiveAvailabilityQuery.class);
     private final ContactQuery contactQuery = mock(ContactQuery.class);
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery = mock(UserMatchingPreferencesQuery.class);
+    private final UserContactInfoQuery userContactInfoQuery = mock(UserContactInfoQuery.class);
     private final MatchProposalRepository repository = mock(MatchProposalRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
@@ -65,17 +68,31 @@ class MatchSuggestionsServiceTest {
                 effectiveAvailabilityQuery,
                 contactQuery,
                 userMatchingPreferencesQuery,
+                userContactInfoQuery,
                 repository,
                 eventPublisher,
                 new OperationalMetrics(new SimpleMeterRegistry())
         );
 
+        when(userContactInfoQuery.hasPhoneNumber(USER_ID)).thenReturn(true);
+        when(userContactInfoQuery.hasPhoneNumber(CANDIDATE_ID)).thenReturn(true);
         when(userMatchingPreferencesQuery.getMatchingPreferences(USER_ID))
                 .thenReturn(Optional.of(preferences(USER_ID, true, true, null, null)));
         when(userMatchingPreferencesQuery.getMatchingPreferences(CANDIDATE_ID))
                 .thenReturn(Optional.of(preferences(CANDIDATE_ID, true, true, null, null)));
         when(contactQuery.getAcceptedContacts(USER_ID))
                 .thenReturn(List.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
+    }
+
+    @Test
+    void createMatchThrowsWhenInitiatorHasNoPhoneNumber() {
+        when(userContactInfoQuery.hasPhoneNumber(USER_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.createMatch(USER_ID, new CreateMatchCommand(CANDIDATE_ID, ChannelType.CHAT)))
+                .isInstanceOf(PhoneNumberRequiredException.class)
+                .hasMessage("Phone number required for creating a match.");
+
+        verifyNoInteractions(contactQuery, effectiveAvailabilityQuery, repository, eventPublisher);
     }
 
     @Test
@@ -152,6 +169,27 @@ class MatchSuggestionsServiceTest {
         assertThat(match.score()).isEqualTo(90);
         assertThat(match.overlapStart()).isEqualTo(NOW);
         assertThat(match.overlapEnd()).isEqualTo(NOW.plus(Duration.ofMinutes(60)));
+    }
+
+    @Test
+    void acceptMatchThrowsWhenCandidateHasNoPhoneNumber() {
+        var suggestion = persistedSuggestion(new MatchProposalEntity(
+                USER_ID,
+                CANDIDATE_ID,
+                ChannelType.CHAT,
+                90,
+                NOW,
+                NOW.plus(Duration.ofMinutes(60))
+        ));
+        when(repository.findByIdAndCandidateUserId(10L, CANDIDATE_ID))
+                .thenReturn(Optional.of(suggestion));
+        when(userContactInfoQuery.hasPhoneNumber(CANDIDATE_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.acceptMatch(CANDIDATE_ID, 10L))
+                .isInstanceOf(PhoneNumberRequiredException.class)
+                .hasMessage("Phone number required for accepting a match.");
+
+        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
     }
 
     @Test
