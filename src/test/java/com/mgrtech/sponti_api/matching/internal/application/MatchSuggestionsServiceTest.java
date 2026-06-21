@@ -4,6 +4,7 @@ import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
 import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.matching.api.ContactLinkType;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
@@ -288,6 +289,49 @@ class MatchSuggestionsServiceTest {
     }
 
     @Test
+    void createContactLinkReturnsOtherUserWhatsAppUrlForAcceptedMatchAfterProposalExpiration() {
+        var match = acceptedMatch(NOW.minus(Duration.ofMinutes(1)));
+        when(repository.findById(10L)).thenReturn(Optional.of(match));
+        when(contactQuery.findAcceptedContact(USER_ID, CANDIDATE_ID))
+                .thenReturn(Optional.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
+        when(contactQuery.findAcceptedContact(CANDIDATE_ID, USER_ID))
+                .thenReturn(Optional.of(new ContactView(USER_ID, "Alice", false, NOW.minus(Duration.ofDays(10)))));
+        when(userContactInfoQuery.getPhoneNumber(CANDIDATE_ID)).thenReturn(Optional.of("+32470123456"));
+
+        var contactLink = service.createContactLink(10L, USER_ID);
+
+        assertThat(contactLink.type()).isEqualTo(ContactLinkType.WHATSAPP);
+        assertThat(contactLink.url()).isEqualTo("https://wa.me/32470123456");
+        assertThat(contactLink.expiresAt()).isNull();
+    }
+
+    @Test
+    void createContactLinkThrowsWhenUsersAreNoLongerAcceptedContacts() {
+        var match = acceptedMatch(null);
+        when(repository.findById(10L)).thenReturn(Optional.of(match));
+        when(contactQuery.findAcceptedContact(USER_ID, CANDIDATE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.createContactLink(10L, USER_ID))
+                .isInstanceOf(AcceptedContactNotFoundException.class)
+                .hasMessage("Users are no longer accepted contacts.");
+    }
+
+    @Test
+    void createContactLinkThrowsWhenOtherUserPhoneNumberIsInvalid() {
+        var match = acceptedMatch(null);
+        when(repository.findById(10L)).thenReturn(Optional.of(match));
+        when(contactQuery.findAcceptedContact(USER_ID, CANDIDATE_ID))
+                .thenReturn(Optional.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
+        when(contactQuery.findAcceptedContact(CANDIDATE_ID, USER_ID))
+                .thenReturn(Optional.of(new ContactView(USER_ID, "Alice", false, NOW.minus(Duration.ofDays(10)))));
+        when(userContactInfoQuery.getPhoneNumber(CANDIDATE_ID)).thenReturn(Optional.of("0470123456"));
+
+        assertThatThrownBy(() -> service.createContactLink(10L, USER_ID))
+                .isInstanceOf(PhoneNumberRequiredException.class)
+                .hasMessage("Valid phone number required for creating a contact link.");
+    }
+
+    @Test
     void getIncomingMatchesReturnsActiveProposedInvitationsForCandidate() {
         var suggestion = persistedSuggestion(new MatchProposalEntity(
                 USER_ID,
@@ -523,5 +567,19 @@ class MatchSuggestionsServiceTest {
         ReflectionTestUtils.setField(suggestion, "id", 10L);
         ReflectionTestUtils.setField(suggestion, "createdAt", NOW);
         return suggestion;
+    }
+
+    private MatchProposalEntity acceptedMatch(Instant expiresAt) {
+        var match = persistedSuggestion(new MatchProposalEntity(
+                USER_ID,
+                CANDIDATE_ID,
+                ChannelType.CHAT,
+                90,
+                NOW,
+                NOW.plus(Duration.ofMinutes(60)),
+                expiresAt
+        ));
+        match.acceptBy(CANDIDATE_ID);
+        return match;
     }
 }

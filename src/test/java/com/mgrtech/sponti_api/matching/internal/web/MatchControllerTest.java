@@ -2,6 +2,8 @@ package com.mgrtech.sponti_api.matching.internal.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
+import com.mgrtech.sponti_api.matching.api.ContactLinkType;
+import com.mgrtech.sponti_api.matching.api.ContactLinkView;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
@@ -195,5 +197,22 @@ public class MatchControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MATCH_PROPOSAL_EXPIRED"))
                 .andExpect(jsonPath("$.detail").value("Match proposal has expired"));
+    }
+
+    @Test
+    void create_contact_link_returns_documented_response() throws Exception {
+        given(matchingFacade.createContactLink(99L, 42L))
+                .willReturn(new ContactLinkView(
+                        ContactLinkType.WHATSAPP,
+                        "https://wa.me/32470123456",
+                        null
+                ));
+
+        mockMvc.perform(post("/api/v1/matches/{id}/contact-link", 99L)
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("WHATSAPP"))
+                .andExpect(jsonPath("$.url").value("https://wa.me/32470123456"))
+                .andExpect(jsonPath("$.expiresAt").doesNotExist());
     }
 }

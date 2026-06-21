@@ -1,9 +1,13 @@
 package com.mgrtech.sponti_api.matching.internal.application;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
 import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.matching.api.ContactLinkType;
+import com.mgrtech.sponti_api.matching.api.ContactLinkView;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
@@ -44,6 +48,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     private static final int MAX_SUGGESTIONS = 3;
     private static final ZoneId FALLBACK_ZONE = ZoneId.of("UTC");
     private static final String MATCH_ALREADY_EXISTS_MESSAGE = "An active or accepted match already exists for this pair.";
+    private static final PhoneNumberUtil PHONE_NUMBER_UTIL = PhoneNumberUtil.getInstance();
 
     private final Clock clock;
     private final MatchingProperties properties;
@@ -148,7 +153,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
 
-        ensureNotExpired(proposal, now);
+        proposal.ensureNotExpired(now);
 
         if(!userContactInfoQuery.hasPhoneNumber(candidateUserId)) {
             throw new PhoneNumberRequiredException("Phone number required for accepting a match.");
@@ -171,11 +176,38 @@ public class MatchSuggestionsService implements MatchingFacade {
                 .orElseThrow(
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
-        ensureNotExpired(proposal, now);
+        proposal.ensureNotExpired(now);
         proposal.declineBy(candidateUserId);
         metrics.matchProposalResponded("declined");
         log.info("Proposal id = {} declined by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ContactLinkView createContactLink(Long matchId, Long userId) {
+        log.info("UserId = {} requested contact link creation for matchId = {}", userId, matchId);
+
+        var match = repository.findById(matchId)
+                .orElseThrow(() -> new MatchNotFoundException("Match not found."));
+
+        match.ensureParticipant(userId);
+        match.ensureContactable();
+        ensureAcceptedContactRelationship(match);
+        ensureBothParticipantsHavePhoneNumbers(match);
+
+        var contactUserId = match.otherParticipantId(userId);
+        var phoneNumber = userContactInfoQuery.getPhoneNumber(contactUserId)
+                .orElseThrow(() -> new PhoneNumberRequiredException("Phone number required for creating a contact link."));
+
+        metrics.contactLinkCreated(ContactLinkType.WHATSAPP.name());
+        log.info("Contact link created by userId = {} for matchId = {}", userId, matchId);
+
+        return new ContactLinkView(
+                ContactLinkType.WHATSAPP,
+                whatsappUrl(phoneNumber),
+                null
+        );
     }
 
     @Override
@@ -413,18 +445,47 @@ public class MatchSuggestionsService implements MatchingFacade {
         );
     }
 
-    private void ensureNotExpired(MatchProposalEntity proposal, Instant now) {
-        var expiresAt = proposal.getExpiresAt();
-        if (expiresAt != null && !expiresAt.isAfter(now)) {
-            throw new MatchProposalExpiredException("Match proposal has expired");
-        }
-    }
-
     private boolean isChannelAllowed(ChannelType channelType, UserMatchingPreferencesView preferences) {
         return switch (channelType) {
             case CHAT -> preferences.allowChat();
             case CALL -> preferences.allowCall();
         };
+    }
+
+    private void ensureBothParticipantsHavePhoneNumbers(MatchProposalEntity match) {
+        if (!userContactInfoQuery.hasPhoneNumber(match.getInitiatorUserId())
+                || !userContactInfoQuery.hasPhoneNumber(match.getCandidateUserId())) {
+            throw new PhoneNumberRequiredException("Both users need valid phone numbers for creating a contact link.");
+        }
+    }
+
+    private void ensureAcceptedContactRelationship(MatchProposalEntity match) {
+        var initiatorUserId = match.getInitiatorUserId();
+        var candidateUserId = match.getCandidateUserId();
+
+        if (contactQuery.findAcceptedContact(initiatorUserId, candidateUserId).isEmpty()
+                || contactQuery.findAcceptedContact(candidateUserId, initiatorUserId).isEmpty()) {
+            throw new AcceptedContactNotFoundException("Users are no longer accepted contacts.");
+        }
+    }
+
+    private String whatsappUrl(String phoneNumber) {
+        return "https://wa.me/" + normalizedE164PhoneNumber(phoneNumber).substring(1);
+    }
+
+    private String normalizedE164PhoneNumber(String phoneNumber) {
+        try {
+            var parsedPhoneNumber = PHONE_NUMBER_UTIL.parse(phoneNumber, null);
+            var normalizedPhoneNumber = PHONE_NUMBER_UTIL.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
+
+            if (!PHONE_NUMBER_UTIL.isValidNumber(parsedPhoneNumber) || !phoneNumber.equals(normalizedPhoneNumber)) {
+                throw new PhoneNumberRequiredException("Valid phone number required for creating a contact link.");
+            }
+
+            return normalizedPhoneNumber;
+        } catch (NumberParseException e) {
+            throw new PhoneNumberRequiredException("Valid phone number required for creating a contact link.");
+        }
     }
 
     private Instant expiresAt(Instant now, Instant overlapEnd) {

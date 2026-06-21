@@ -1,5 +1,7 @@
 package com.mgrtech.sponti_api.matching.internal.domain;
 
+import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
+import com.mgrtech.sponti_api.matching.internal.exception.UserNotBelongsMatchException;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -118,6 +120,37 @@ public class MatchProposalEntity {
 
     public boolean isProposed() {
         return status == MatchProposalStatus.PROPOSED;
+    }
+
+    public void ensureAccepted() {
+        if (status != MatchProposalStatus.ACCEPTED) {
+            throw new IllegalStateException("Only accepted match proposals can expose contact links.");
+        }
+    }
+
+    public void ensureContactable() {
+        ensureAccepted();
+    }
+
+    public void ensureNotExpired(Instant now) {
+        if (expiresAt != null && !expiresAt.isAfter(now)) {
+            throw new MatchProposalExpiredException("Match proposal has expired");
+        }
+    }
+
+    public void ensureParticipant(Long userId) {
+        if (!isParticipant(userId)) {
+            throw new UserNotBelongsMatchException("UserId is not initiator nor candidate of this match.");
+        }
+    }
+
+    public Long otherParticipantId(Long userId) {
+        ensureParticipant(userId);
+        return initiatorUserId.equals(userId) ? candidateUserId : initiatorUserId;
+    }
+
+    public boolean isParticipant(Long userId) {
+        return initiatorUserId.equals(userId) || candidateUserId.equals(userId);
     }
 
     private void ensureProposed() {
