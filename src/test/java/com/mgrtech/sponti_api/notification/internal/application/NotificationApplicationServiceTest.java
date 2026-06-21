@@ -97,6 +97,66 @@ class NotificationApplicationServiceTest {
     }
 
     @Test
+    void recordsMatchAcceptedNotificationWithoutCooldown() {
+        when(repository.existsByUserIdAndTypeAndRelatedMatchId(
+                1L,
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                99L
+        )).thenReturn(false);
+
+        service.send(new SendNotificationCommand(
+                1L,
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                "It's a match",
+                "Open WhatsApp to start chatting.",
+                Map.of(
+                        "matchId", "99",
+                        "candidateUserId", "2",
+                        "targetScreen", "match_detail",
+                        "action", "match_accepted"
+                )
+        ));
+
+        var captor = ArgumentCaptor.forClass(NotificationHistoryEntity.class);
+        verify(repository).save(captor.capture());
+        verify(dispatcher).dispatch(eq(captor.getValue()), any());
+        assertThat(captor.getValue())
+                .satisfies(history -> {
+                    assertThat(history.getUserId()).isEqualTo(1L);
+                    assertThat(history.getType()).isEqualTo(NotificationType.MATCH_PROPOSAL_ACCEPTED);
+                    assertThat(history.getRelatedUserId()).isNull();
+                    assertThat(history.getRelatedMatchId()).isEqualTo(99L);
+                    assertThat(history.getSentAt()).isEqualTo(NOW);
+                    assertThat(history.getMetadata()).contains("action=match_accepted");
+                    assertThat(history.getMetadata()).contains("targetScreen=match_detail");
+                });
+    }
+
+    @Test
+    void doesNotRecordDuplicateMatchAcceptedNotificationForSameMatch() {
+        when(repository.existsByUserIdAndTypeAndRelatedMatchId(
+                1L,
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                99L
+        )).thenReturn(true);
+
+        service.send(new SendNotificationCommand(
+                1L,
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                "It's a match",
+                "Open WhatsApp to start chatting.",
+                Map.of(
+                        "matchId", "99",
+                        "targetScreen", "match_detail",
+                        "action", "match_accepted"
+                )
+        ));
+
+        verify(repository, never()).save(any());
+        verify(dispatcher, never()).dispatch(any(), any());
+    }
+
+    @Test
     void doesNotRecordNotificationWhenPushDisabledByUserPreferences() {
         when(userMatchingPreferencesQuery.getMatchingPreferences(2L))
                 .thenReturn(Optional.of(preferences(false, true)));

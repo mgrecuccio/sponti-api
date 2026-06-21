@@ -6,6 +6,7 @@ import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
+import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalCreatedEvent;
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalEntity;
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalStatus;
@@ -169,6 +170,15 @@ class MatchSuggestionsServiceTest {
         assertThat(match.score()).isEqualTo(90);
         assertThat(match.overlapStart()).isEqualTo(NOW);
         assertThat(match.overlapEnd()).isEqualTo(NOW.plus(Duration.ofMinutes(60)));
+
+        var eventCaptor = ArgumentCaptor.forClass(MatchProposalAcceptedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue())
+                .satisfies(event -> {
+                    assertThat(event.matchId()).isEqualTo(10L);
+                    assertThat(event.initiatorUserId()).isEqualTo(USER_ID);
+                    assertThat(event.candidateUserId()).isEqualTo(CANDIDATE_ID);
+                });
     }
 
     @Test
@@ -322,14 +332,36 @@ class MatchSuggestionsServiceTest {
     void createMatchThrowsWhenActiveProposalAlreadyExists() {
         when(contactQuery.findAcceptedContact(USER_ID, CANDIDATE_ID))
                 .thenReturn(Optional.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
-        when(repository.existsByInitiatorUserIdAndCandidateUserIdAndStatus(
+        when(repository.existsBlockingProposalBetweenUsers(
                 USER_ID,
                 CANDIDATE_ID,
-                MatchProposalStatus.PROPOSED
+                MatchProposalStatus.PROPOSED,
+                MatchProposalStatus.ACCEPTED,
+                NOW
         )).thenReturn(true);
 
         assertThatThrownBy(() -> service.createMatch(USER_ID, new CreateMatchCommand(CANDIDATE_ID, ChannelType.CHAT)))
-                .isInstanceOf(MatchAlreadyExistsException.class);
+                .isInstanceOf(MatchAlreadyExistsException.class)
+                .hasMessage("An active or accepted match already exists for this pair.");
+
+        verifyNoInteractions(effectiveAvailabilityQuery);
+    }
+
+    @Test
+    void createMatchThrowsWhenReverseAcceptedProposalAlreadyExists() {
+        when(contactQuery.findAcceptedContact(CANDIDATE_ID, USER_ID))
+                .thenReturn(Optional.of(new ContactView(USER_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
+        when(repository.existsBlockingProposalBetweenUsers(
+                CANDIDATE_ID,
+                USER_ID,
+                MatchProposalStatus.PROPOSED,
+                MatchProposalStatus.ACCEPTED,
+                NOW
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> service.createMatch(CANDIDATE_ID, new CreateMatchCommand(USER_ID, ChannelType.CHAT)))
+                .isInstanceOf(MatchAlreadyExistsException.class)
+                .hasMessage("An active or accepted match already exists for this pair.");
 
         verifyNoInteractions(effectiveAvailabilityQuery);
     }

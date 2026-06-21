@@ -49,6 +49,7 @@ The notification module is not responsible for:
 
 Current notification types:
 - MATCH_PROPOSAL_CREATED
+- MATCH_PROPOSAL_ACCEPTED
 - MATCH_SUGGESTIONS_AVAILABLE
 
 3.1 MATCH_PROPOSAL_CREATED
@@ -68,7 +69,24 @@ Suggested mobile behavior:
 
 This notification is concrete and should normally be sent once per stored proposal.
 
-3.2 MATCH_SUGGESTIONS_AVAILABLE
+3.2 MATCH_PROPOSAL_ACCEPTED
+
+Business meaning:
+"The invited user accepted your match proposal."
+
+Triggered by:
+- MatchProposalAcceptedEvent
+
+Target user:
+- initiatorUserId
+
+Suggested mobile behavior:
+- open or refresh match detail
+- allow the user to request the WhatsApp contact link from the backend
+
+This notification is concrete and should normally be sent once per accepted proposal to the proposal initiator.
+
+3.3 MATCH_SUGGESTIONS_AVAILABLE
 
 Business meaning:
 "There may be useful suggestions available now."
@@ -107,6 +125,12 @@ Example data for MATCH_PROPOSAL_CREATED:
 - initiatorUserId
 - channelType
 - targetScreen=incoming_matches
+
+Example data for MATCH_PROPOSAL_ACCEPTED:
+- matchId
+- candidateUserId
+- targetScreen=match_detail
+- action=match_accepted
 
 Example data for MATCH_SUGGESTIONS_AVAILABLE:
 - targetScreen=match_suggestions
