@@ -40,9 +40,13 @@ If the product later changes to a fully symmetric model where both users receive
 
 Then the proposal becomes ACCEPTED only when both responses are ACCEPTED.
 
+After a proposal is ACCEPTED, the pair is already matched. The backend should reject any new proposal for the same two users in either direction, including User B trying to create a new proposal back to User A.
+
 2.3 Accepted Match Notification
 
-Once the backend determines that the match is accepted by both required parties, it sends a push notification to both users.
+Once the backend determines that the match is accepted by both required parties, it sends a push notification to User A, the proposal initiator.
+
+In the current initiator/candidate model, User B should not receive a second push notification immediately after accepting. User B is already in the active flow, and the accept response should return the accepted match state so the mobile app can navigate directly to the match detail screen or refresh the current screen.
 
 Recommended notification copy:
 - Title: "It's a match"
@@ -147,6 +151,12 @@ Validation rules:
 - current user has a phone number
 - other user has a phone number
 - phone numbers are normalized and valid for WhatsApp link creation
+
+Proposal creation should also validate that no blocking proposal already exists for the same user pair. A blocking proposal is:
+- PROPOSED and not expired
+- ACCEPTED
+
+The check is unordered by user pair, so A -> B and B -> A are treated as the same pair for duplicate prevention.
 
 Response:
 
@@ -281,14 +291,19 @@ Current notification module already supports matching notifications and routing 
 
 Add a new notification type:
 
-MATCH_ACCEPTED
+MATCH_PROPOSAL_ACCEPTED
 
 Triggered when:
 - a proposal transitions to ACCEPTED
 
 Target users:
 - initiatorUserId
-- candidateUserId
+
+Do not send MATCH_PROPOSAL_ACCEPTED as a push notification to candidateUserId in the current one-sided proposal flow. The candidate just accepted the proposal, so the accept API response should update the UI and route the candidate to the accepted match screen.
+
+Future symmetric model:
+- notify any participant who did not trigger the final accepted transition
+- avoid notifying the user who is already in the active accept flow unless there is a specific product reason
 
 Suggested data:
 - matchId
@@ -345,12 +360,12 @@ User module:
 Matching module:
 - owns proposal acceptance rules
 - checks phone number requirement before accepting
-- publishes MATCH_ACCEPTED event after accepted transition
+- publishes MatchProposalAcceptedEvent after accepted transition
 - owns contact-link endpoint or delegates link creation to a small application service
 
 Notification module:
 - listens to the accepted match event
-- sends MATCH_ACCEPTED push notifications to both users
+- sends MATCH_PROPOSAL_ACCEPTED push notifications to the initiator in the current initiator/candidate model
 - includes routing metadata only
 
 Mobile app:
@@ -381,8 +396,9 @@ Accept match:
 - non-candidate cannot accept in the current initiator/candidate model
 
 Accepted match notification:
-- MATCH_ACCEPTED event is published exactly once when proposal becomes ACCEPTED
-- both users receive notification commands
+- MatchProposalAcceptedEvent is published exactly once when proposal becomes ACCEPTED
+- initiator receives a notification command in the current initiator/candidate model
+- candidate does not receive a duplicate push immediately after accepting; the accept response drives the candidate UI
 - notification data contains matchId and targetScreen
 - notification data does not contain WhatsApp URL or phone numbers
 
@@ -403,7 +419,7 @@ Include this in the first release if WhatsApp chat is the core outcome of a succ
 Keep v1 simple:
 - optional phone number at registration
 - required phone number before accepting a match
-- accepted match notification to both users
+- accepted match notification to the initiator only in the current initiator/candidate model
 - authenticated contact-link endpoint
 - backend-generated WhatsApp URL
 - no WhatsApp URL in push payload

@@ -106,7 +106,7 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
-    void get_match_suggestions_when_users_are_contacts_favorite_and_all_penalties_apply() {
+    void get_match_suggestions_when_users_are_contacts_favorite_and_non_blocking_penalties_apply() {
         var initiator = createUser("initiator", "Initiator");
         createChatAvailability(initiator.id(), LocalTime.of(13, 0));
         var candidate = createUser("candidate", "Candidate");
@@ -114,12 +114,6 @@ public class MatchSuggestionsServiceIntegrationTest {
         createAcceptedContact(initiator.id(), candidate, true);
 
         putUserInsideQuietHours(initiator.id());
-        recordRespondedSuggestion(
-                initiator.id(),
-                candidate.id(),
-                MatchProposalStatus.ACCEPTED,
-                Instant.parse("2026-03-30T08:00:00Z")
-        );
         recordRespondedSuggestion(
                 candidate.id(),
                 initiator.id(),
@@ -133,7 +127,6 @@ public class MatchSuggestionsServiceIntegrationTest {
                 + properties.scoring().favoriteBoost()
                 + properties.scoring().freeNowBoost()
                 - properties.scoring().quietHoursPenalty()
-                - properties.scoring().recentAcceptedPenalty()
                 - properties.scoring().recentDeclinePenalty()
                 - properties.scoring().recentSuggestionPenalty();
 
@@ -528,7 +521,7 @@ public class MatchSuggestionsServiceIntegrationTest {
         assertThatThrownBy(() -> matchingFacade.createMatch(
                 candidate.id(), new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
         )).isInstanceOf(MatchAlreadyExistsException.class)
-          .hasMessage("A proposed match already exists for this pair.");
+          .hasMessage("An active or accepted match already exists for this pair.");
     }
 
     @Test

@@ -72,8 +72,9 @@ class NotificationApplicationService implements NotificationFacade {
             );
         }
 
-        if (command.type() == NotificationType.MATCH_PROPOSAL_CREATED) {
-            return proposalCreatedSendDecision(command, relatedMatchId);
+        if (command.type() == NotificationType.MATCH_PROPOSAL_CREATED
+                || command.type() == NotificationType.MATCH_PROPOSAL_ACCEPTED) {
+            return concreteMatchSendDecision(command, relatedMatchId);
         }
 
         if (command.type() == NotificationType.MATCH_SUGGESTIONS_AVAILABLE) {
@@ -91,7 +92,7 @@ class NotificationApplicationService implements NotificationFacade {
                 .orElse(true);
     }
 
-    private SendDecision proposalCreatedSendDecision(SendNotificationCommand command, Long relatedMatchId) {
+    private SendDecision concreteMatchSendDecision(SendNotificationCommand command, Long relatedMatchId) {
         if (relatedMatchId == null) {
             return SendDecision.allowed();
         }

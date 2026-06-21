@@ -7,6 +7,7 @@ import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.api.MatchView;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
+import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalCreatedEvent;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;
@@ -42,6 +43,7 @@ public class MatchSuggestionsService implements MatchingFacade {
 
     private static final int MAX_SUGGESTIONS = 3;
     private static final ZoneId FALLBACK_ZONE = ZoneId.of("UTC");
+    private static final String MATCH_ALREADY_EXISTS_MESSAGE = "An active or accepted match already exists for this pair.";
 
     private final Clock clock;
     private final MatchingProperties properties;
@@ -70,8 +72,8 @@ public class MatchSuggestionsService implements MatchingFacade {
         var contact = contactQuery.findAcceptedContact(userId, candidateUserId)
                 .orElseThrow(() -> new AcceptedContactNotFoundException("Candidate is not an accepted contact."));
 
-        if(hasActiveProposal(userId, candidateUserId)) {
-            throw new MatchAlreadyExistsException("A proposed match already exists for this pair.");
+        if(hasBlockingProposal(userId, candidateUserId, now)) {
+            throw new MatchAlreadyExistsException(MATCH_ALREADY_EXISTS_MESSAGE);
         }
 
         var userPreferences = userMatchingPreferencesQuery.getMatchingPreferences(userId)
@@ -132,7 +134,7 @@ public class MatchSuggestionsService implements MatchingFacade {
             );
             return toMatchView(proposal);
         } catch (DataIntegrityViolationException e) {
-            throw new MatchAlreadyExistsException("A proposed match already exists for this pair.");
+            throw new MatchAlreadyExistsException(MATCH_ALREADY_EXISTS_MESSAGE);
         }
     }
 
@@ -154,6 +156,8 @@ public class MatchSuggestionsService implements MatchingFacade {
 
         proposal.acceptBy(candidateUserId);
         metrics.matchProposalResponded("accepted");
+        eventPublisher.publishEvent(MatchProposalAcceptedEvent.from(proposal));
+
         log.info("Proposal id = {} accepted by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
     }
@@ -257,7 +261,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     ) {
         var candidateUserId = contact.contactUserId();
 
-        if (hasActiveProposal(userId, candidateUserId)) {
+        if (hasBlockingProposal(userId, candidateUserId, now)) {
             return Optional.empty();
         }
 
@@ -399,15 +403,13 @@ public class MatchSuggestionsService implements MatchingFacade {
         return left.isBefore(right) ? left : right;
     }
 
-    private boolean hasActiveProposal(Long userId, Long candidateUserId) {
-        return repository.existsByInitiatorUserIdAndCandidateUserIdAndStatus(
+    private boolean hasBlockingProposal(Long userId, Long candidateUserId, Instant now) {
+        return repository.existsBlockingProposalBetweenUsers(
                 userId,
                 candidateUserId,
-                MatchProposalStatus.PROPOSED
-        ) || repository.existsByInitiatorUserIdAndCandidateUserIdAndStatus(
-                candidateUserId,
-                userId,
-                MatchProposalStatus.PROPOSED
+                MatchProposalStatus.PROPOSED,
+                MatchProposalStatus.ACCEPTED,
+                now
         );
     }
 

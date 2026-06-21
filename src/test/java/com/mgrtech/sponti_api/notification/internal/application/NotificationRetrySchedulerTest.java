@@ -96,6 +96,24 @@ class NotificationRetrySchedulerTest {
         ));
     }
 
+    @Test
+    public void dispatch_match_proposal_accepted_notification() {
+        var notification = notificationHistory(NotificationType.MATCH_PROPOSAL_ACCEPTED);
+        when(historyRepository.findTop50ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(NotificationDeliveryStatus.RETRY_PENDING, NOW))
+                .thenReturn(List.of(notification));
+
+        scheduler(notificationProperties(true, 3, true)).retryDueNotifications();
+
+
+        verify(dispatcher).dispatch(notification, new SendNotificationCommand(
+                42L,
+                NotificationType.MATCH_PROPOSAL_ACCEPTED,
+                "It's a match",
+                "Open WhatsApp to start chatting.",
+                Map.of()
+        ));
+    }
+
     private NotificationRetryScheduler scheduler(NotificationProperties properties) {
         return new NotificationRetryScheduler(
                 Clock.fixed(NOW, ZoneOffset.UTC),
