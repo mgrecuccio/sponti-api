@@ -8,6 +8,7 @@ import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
@@ -16,6 +17,7 @@ import com.mgrtech.sponti_api.user.api.view.CreatedUserView;
 import com.mgrtech.sponti_api.user.api.view.UserCredentialsView;
 import com.mgrtech.sponti_api.user.api.view.UserLookupView;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
 import com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity;
@@ -46,7 +48,8 @@ public class UserApplicationService implements
         UserCredentialsQuery,
         UserProfileQuery,
         UserLookupQuery,
-        UserMatchingPreferencesQuery
+        UserMatchingPreferencesQuery,
+        UserContactInfoQuery
 {
     private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
 
@@ -92,6 +95,19 @@ public class UserApplicationService implements
 
     @Override
     @Transactional(readOnly = true)
+    public boolean hasPhoneNumber(Long userId) {
+        return getPhoneNumber(userId).isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> getPhoneNumber(Long userId) {
+        return userRepository.findById(userId)
+                .map(UserEntity::getPhoneNumber);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Long> getMatchingEnabledUserIds() {
         return userPreferenceRepository.findMatchingEnabledUserIds();
     }
@@ -101,14 +117,15 @@ public class UserApplicationService implements
     public CreatedUserView createUser(CreateUserCommand command) {
         log.info("Registering user: email={}", command.email());
         var normalizedEmail = normalizeEmail(command.email());
+        var phoneNumber = blankToNull(command.phoneNumber());
 
         if(userRepository.existsByEmail(normalizedEmail)) {
             log.warn("Registration blocked: email={} already exists", command.email());
             throw new EmailAlreadyUsedException("Email already used");
         }
 
-        if(command.phoneNumber() != null && userRepository.existsByPhoneNumber(command.phoneNumber())) {
-            log.warn("Registration blocked: phoneNumber={} already exists", command.phoneNumber());
+        if(phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)) {
+            log.warn("Registration blocked: phoneNumber={} already exists", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
 
@@ -116,7 +133,7 @@ public class UserApplicationService implements
                 normalizedEmail,
                 command.passwordHash(),
                 command.displayName(),
-                blankToNull(command.phoneNumber()),
+                phoneNumber,
                 command.timezone()
         );
 
@@ -136,18 +153,27 @@ public class UserApplicationService implements
     @Transactional
     public UserProfileView updateProfile(Long userId, UpdateUserCommand command) {
         log.info("Updating userId={}", userId);
+        var phoneNumber = blankToNull(command.phoneNumber());
 
         var user = userRepository.findById(userId)
                         .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
 
-        if(command.phoneNumber() != null && userRepository.existsByPhoneNumber(command.phoneNumber())) {
-            log.warn("Profile update blocked: phoneNumber={} already exists", command.phoneNumber());
+        if(phoneNumber != null && userRepository.existsByPhoneNumberAndIdNot(phoneNumber, userId)) {
+            log.warn("Profile update blocked: phoneNumber={} already exists for another user", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
 
-        user.update(command.displayName(), command.timezone(), command.phoneNumber());
+        user.update(command.displayName(), command.timezone(), phoneNumber);
         log.info("UserId={} updated.", userId);
         return toProfileView(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserPrivateProfileView getCurrentUserProfile(Long userId) {
+        return userRepository.findById(userId)
+                .map(UserEntity::toPrivateProfileView)
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
     }
 
     @Override

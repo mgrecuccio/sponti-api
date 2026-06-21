@@ -99,10 +99,21 @@ The mobile app is responsible for:
 - showing proposal state
 - showing "You accepted. Waiting for their response." when the current user accepted but the other required response is still pending
 - showing expiration information for pending proposals
+- supporting optional phone number entry during registration
+- allowing the current user to add or update their phone number from profile/settings
+- before sending a match proposal as User A, optionally pre-checking whether the current user has a phone number and routing them to phone number setup if missing
+- handling PHONE_NUMBER_REQUIRED_FOR_MATCH_PROPOSAL_CREATION from the create-match endpoint by routing User A to phone number setup, then allowing them to retry sending the proposal
+- before accepting an incoming match proposal as User B, optionally pre-checking whether the current user has a phone number and routing them to phone number setup if missing
+- handling PHONE_NUMBER_REQUIRED_FOR_MATCH_ACCEPTANCE from the accept-match endpoint by routing User B to phone number setup, then allowing them to retry acceptance
 - opening the match detail screen when a push notification is tapped
 - calling the contact-link endpoint when the user wants to chat
 - opening the returned WhatsApp link
 - handling the case where WhatsApp is not installed
+
+Important:
+- User A's consent is represented by creating the match proposal, so User A should be asked for a phone number before sending the proposal if they do not already have one.
+- User B's consent is represented by accepting the incoming proposal, so User B should be asked for a phone number before accepting if they do not already have one.
+- The mobile app may pre-check the profile for a smoother UX, but the backend remains the source of truth and may still reject the create or accept request with a phone-number-required error.
 
 Recommended pending copy:
 - "You accepted. We'll let you know if they accept too."
@@ -344,7 +355,10 @@ Notification module:
 
 Mobile app:
 - handles registration optional phone field
-- handles phone-number-required error during match acceptance
+- allows users to add or update their phone number from profile/settings
+- optionally pre-checks missing phone number before match proposal creation and match acceptance
+- handles phone-number-required error during match proposal creation for User A
+- handles phone-number-required error during match acceptance for User B
 - opens match detail from notification
 - calls contact-link endpoint
 - opens WhatsApp
