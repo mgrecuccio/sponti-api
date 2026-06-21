@@ -5,6 +5,7 @@ import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.matching.api.ContactLinkType;
+import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
@@ -342,7 +343,7 @@ class MatchSuggestionsServiceTest {
                 NOW.plus(Duration.ofMinutes(60)),
                 NOW.plus(Duration.ofMinutes(30))
         ));
-        when(repository.findActiveIncoming(CANDIDATE_ID, MatchProposalStatus.PROPOSED, NOW))
+        when(repository.findVisibleByUserIdAndStatus(CANDIDATE_ID, MatchProposalStatus.PROPOSED, NOW, false, true))
                 .thenReturn(List.of(suggestion));
 
         var incoming = service.getIncomingMatches(CANDIDATE_ID);
@@ -359,6 +360,33 @@ class MatchSuggestionsServiceTest {
                     assertThat(match.overlapStart()).isEqualTo(NOW);
                     assertThat(match.overlapEnd()).isEqualTo(NOW.plus(Duration.ofMinutes(60)));
                 });
+    }
+
+    @Test
+    void getAcceptedMatchesReturnsAcceptedMatchesForEitherParticipant() {
+        var initiatedByUser = acceptedMatch(null);
+        var initiatedByOtherUser = persistedSuggestion(new MatchProposalEntity(
+                CANDIDATE_ID,
+                USER_ID,
+                ChannelType.CALL,
+                80,
+                NOW,
+                NOW.plus(Duration.ofMinutes(45)),
+                NOW.minus(Duration.ofMinutes(1))
+        ));
+        initiatedByOtherUser.acceptBy(USER_ID);
+        ReflectionTestUtils.setField(initiatedByOtherUser, "id", 11L);
+        when(repository.findVisibleByUserIdAndStatus(USER_ID, MatchProposalStatus.ACCEPTED, NOW, true, false))
+                .thenReturn(List.of(initiatedByUser, initiatedByOtherUser));
+
+        var accepted = service.getAcceptedMatches(USER_ID);
+
+        assertThat(accepted)
+                .extracting(MatchInvitationView::status)
+                .containsOnly(MatchProposalStatus.ACCEPTED.name());
+        assertThat(accepted)
+                .extracting(MatchInvitationView::id)
+                .containsExactly(10L, 11L);
     }
 
     @Test

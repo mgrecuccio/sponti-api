@@ -237,9 +237,31 @@ public class MatchSuggestionsService implements MatchingFacade {
 
     @Override
     @Transactional(readOnly = true)
+    public List<MatchInvitationView> getAcceptedMatches(Long userId) {
+        log.info("Accepted match invitations requested for userId={}", userId);
+        return getMatches(userId, MatchProposalStatus.ACCEPTED, true, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<MatchInvitationView> getIncomingMatches(Long userId) {
         log.info("Incoming match invitations requested for userId={}", userId);
-        return repository.findActiveIncoming(userId, MatchProposalStatus.PROPOSED, Instant.now(clock))
+        return getMatches(userId, MatchProposalStatus.PROPOSED, false, true);
+    }
+
+    private List<MatchInvitationView> getMatches(
+            Long userId,
+            MatchProposalStatus status,
+            boolean includeInitiated,
+            boolean requireUnexpired
+    ) {
+        return repository.findVisibleByUserIdAndStatus(
+                        userId,
+                        status,
+                        Instant.now(clock),
+                        includeInitiated,
+                        requireUnexpired
+                )
                 .stream()
                 .map(MatchInvitationView::toMatchInvitationView)
                 .toList();
