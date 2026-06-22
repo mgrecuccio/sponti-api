@@ -1,0 +1,76 @@
+name: Main - Release Candidate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-candidate:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: sponti-api
+      VERSION: rc-${{ github.run_number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Full build and tests
+        run: ./mvnw -B -ntp clean verify
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "$IMAGE_NAME:${{ github.sha }}" \
+            --tag "$IMAGE_NAME:$VERSION" \
+            .
+
+      - name: Create release notes
+        run: |
+          {
+            echo "# Sponti API $VERSION"
+            echo
+            echo "Release candidate created from main."
+            echo
+            echo "Commit: ${{ github.sha }}"
+            echo "Branch: ${{ github.ref_name }}"
+            echo
+            echo "Docker image tags validated by this workflow:"
+            echo "- $IMAGE_NAME:${{ github.sha }}"
+            echo "- $IMAGE_NAME:$VERSION"
+          } > release-notes.md
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$VERSION" \
+            --title "Sponti API $VERSION" \
+            --notes-file release-notes.md \
+            --prerelease
