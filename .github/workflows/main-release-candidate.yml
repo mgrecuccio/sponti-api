@@ -1,16 +1,16 @@
-name: Main - Release Candidate
+name: Master - Release Candidate
 
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: main-release-candidate-${{ github.ref }}
+  group: master-release-candidate-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -49,7 +49,7 @@ jobs:
           {
             echo "# Sponti API $VERSION"
             echo
-            echo "Release candidate created from main."
+            echo "Release candidate created from master."
             echo
             echo "Commit: ${{ github.sha }}"
             echo "Branch: ${{ github.ref_name }}"
