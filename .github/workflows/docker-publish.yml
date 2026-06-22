@@ -3,17 +3,17 @@ name: Docker - Publish Image
 on:
   workflow_run:
     workflows:
-      - Main - Release Candidate
+      - Master - Release Candidate
     types:
       - completed
     branches:
-      - main
+      - master
   workflow_dispatch:
     inputs:
       ref:
         description: Branch, tag, or commit SHA to publish
         required: false
-        default: main
+        default: master
       image_tag:
         description: Image tag to publish, for example rc-1 or v0.1.0-rc.1
         required: false
