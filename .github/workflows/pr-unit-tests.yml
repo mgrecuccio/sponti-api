@@ -3,7 +3,6 @@ name: PR - Compile and Unit Tests
 on:
   pull_request:
     branches:
-      - develop
       - master
     types:
       - opened
