@@ -8,13 +8,13 @@ on:
       ref:
         description: 'Branch or ref to test'
         required: false
-        default: 'develop'
+        default: 'master'
 
 permissions:
   contents: read
 
 concurrency:
-  group: daily-full-${{ github.event.inputs.ref || 'develop' }}
+  group: daily-full-${{ github.event.inputs.ref || 'master' }}
   cancel-in-progress: false
 
 jobs:
@@ -28,11 +28,11 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      - name: Checkout develop on scheduled run
+      - name: Checkout master on scheduled run
         if: github.event_name == 'schedule'
         uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: master
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
