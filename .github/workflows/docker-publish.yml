@@ -115,7 +115,7 @@ jobs:
           gh api "repos/${INFRA_REPOSITORY}/dispatches" \
             --method POST \
             --field event_type=update-prod-image \
-            --raw-field client_payload="{\"image_tag\":\"${IMAGE_TAG}\"}"
+            --field client_payload[image_tag]="${IMAGE_TAG}"
 
       - name: Add workflow summary
         run: |
