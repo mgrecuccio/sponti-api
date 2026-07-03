@@ -101,6 +101,22 @@ jobs:
             org.opencontainers.image.revision=${{ steps.meta.outputs.source_sha }}
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
 
+      - name: Request production image update
+        env:
+          GH_TOKEN: ${{ secrets.VEYA_INFRA_DISPATCH_TOKEN }}
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
+          INFRA_REPOSITORY: mgrecuccio/veya-infra
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "Missing VEYA_INFRA_DISPATCH_TOKEN secret." >&2
+            exit 1
+          fi
+
+          gh api "repos/${INFRA_REPOSITORY}/dispatches" \
+            --method POST \
+            --field event_type=update-prod-image \
+            --raw-field client_payload="{\"image_tag\":\"${IMAGE_TAG}\"}"
+
       - name: Add workflow summary
         run: |
           {
@@ -110,4 +126,6 @@ jobs:
             echo "Version tag: \`${{ steps.meta.outputs.version }}\`"
             echo "Source commit: \`${{ steps.meta.outputs.source_sha }}\`"
             echo "Digest: \`${{ steps.build.outputs.digest }}\`"
+            echo
+            echo "Requested production image update in \`mgrecuccio/veya-infra\`."
           } >> "$GITHUB_STEP_SUMMARY"
