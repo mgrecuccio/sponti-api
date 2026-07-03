@@ -15,6 +15,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -106,5 +108,12 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+    }
+
+    @Bean
+    UserDetailsService userDetailsService() {
+        return username -> {
+            throw new UsernameNotFoundException("Username/password authentication is not supported");
+        };
     }
 }
