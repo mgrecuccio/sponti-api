@@ -399,10 +399,10 @@ Useful commands:
 
 ### Phase 8 — Production Readiness
 
-* [ ] CI/CD pipeline
+* [x] CI/CD pipeline
 * [x] Observability (logs/metrics)
 * [x] Security hardening
-* [ ] Deployment (Azure)
+* [x] Deployment (Azure)
 
 ---
 
