@@ -22,7 +22,7 @@ management:
 
 app:
   cors:
-    allowed-origin: ${APP_CORS_ALLOWED_ORIGIN:http://localhost:8100}
+    allowed-origin: ${APP_CORS_ALLOWED_ORIGIN:http://localhost,http://localhost:8100,capacitor://localhost}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:0123456789012345678901234567890123456789012345678901234567890123}

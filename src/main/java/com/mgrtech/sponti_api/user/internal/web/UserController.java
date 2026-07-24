@@ -1,12 +1,11 @@
 package com.mgrtech.sponti_api.user.internal.web;
 
-import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
-import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
@@ -34,7 +33,6 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 @AllArgsConstructor
 public class UserController {
 
-    private final UserProfileQuery userProfileQuery;
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
     private final UserFacade userFacade;
     private final UserPreferenceFacade userPreferenceFacade;
