@@ -240,6 +240,17 @@ APP_CORS_ALLOWED_ORIGIN=
 APP_SECURITY_JWT_SECRET=
 ```
 
+`APP_CORS_ALLOWED_ORIGIN` accepts a comma-separated list of exact origins. Omit
+trailing slashes and do not include inline comments in the environment variable:
+
+```bash
+APP_CORS_ALLOWED_ORIGIN=http://localhost,http://localhost:8100,capacitor://localhost
+```
+
+These origins cover Android Capacitor installed apps (`http://localhost`), Ionic
+browser development (`http://localhost:8100`), and iOS Capacitor installed apps
+(`capacitor://localhost`).
+
 ---
 
 ## 🔐 Authentication
