@@ -112,10 +112,26 @@ jobs:
             exit 1
           fi
 
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "Missing image tag from metadata step." >&2
+            exit 1
+          fi
+
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid image tag: $IMAGE_TAG" >&2
+            exit 1
+          fi
+
           gh api "repos/${INFRA_REPOSITORY}/dispatches" \
             --method POST \
-            --field event_type=update-prod-image \
-            --field client_payload[image_tag]="${IMAGE_TAG}"
+            --input - <<EOF
+          {
+            "event_type": "update-prod-image",
+            "client_payload": {
+              "image_tag": "${IMAGE_TAG}"
+            }
+          }
+          EOF
 
       - name: Add workflow summary
         run: |
