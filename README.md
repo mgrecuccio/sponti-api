@@ -244,12 +244,13 @@ APP_SECURITY_JWT_SECRET=
 trailing slashes and do not include inline comments in the environment variable:
 
 ```bash
-APP_CORS_ALLOWED_ORIGIN=http://localhost,http://localhost:8100,capacitor://localhost
+APP_CORS_ALLOWED_ORIGIN=https://localhost,http://localhost,capacitor://localhost,http://localhost:8100
 ```
 
-These origins cover Android Capacitor installed apps (`http://localhost`), Ionic
-browser development (`http://localhost:8100`), and iOS Capacitor installed apps
-(`capacitor://localhost`).
+These origins cover Android Capacitor 8 installed apps (`https://localhost`),
+older or custom Android Capacitor installed apps (`http://localhost`), iOS
+Capacitor installed apps (`capacitor://localhost`), and Ionic browser
+development (`http://localhost:8100`).
 
 ---
 
