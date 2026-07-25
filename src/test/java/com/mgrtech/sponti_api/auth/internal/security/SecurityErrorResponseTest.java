@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
-@TestPropertySource(properties = "app.cors.allowed-origin=http://localhost, http://localhost:8100, capacitor://localhost")
+@TestPropertySource(properties = "app.cors.allowed-origin=https://localhost, http://localhost, capacitor://localhost, http://localhost:8100")
 class SecurityErrorResponseTest {
 
     @Autowired
@@ -56,7 +56,16 @@ class SecurityErrorResponseTest {
     }
 
     @Test
-    void cors_preflight_allows_configured_android_capacitor_origin() throws Exception {
+    void cors_preflight_allows_configured_android_capacitor_8_origin() throws Exception {
+        mockMvc.perform(options("https://api.sponti.uk/api/v1/users/me")
+                        .header(ORIGIN, "https://localhost")
+                        .header(ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(ACCESS_CONTROL_ALLOW_ORIGIN, "https://localhost"));
+    }
+
+    @Test
+    void cors_preflight_allows_configured_older_android_capacitor_origin() throws Exception {
         mockMvc.perform(options("https://api.sponti.uk/api/v1/users/me")
                         .header(ORIGIN, "http://localhost")
                         .header(ACCESS_CONTROL_REQUEST_METHOD, "GET"))
