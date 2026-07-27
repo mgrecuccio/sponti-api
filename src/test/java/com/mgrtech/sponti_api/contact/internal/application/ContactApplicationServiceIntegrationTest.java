@@ -2,7 +2,7 @@ package com.mgrtech.sponti_api.contact.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FullIntegrationTest;
-import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.exception.*;
@@ -577,6 +577,10 @@ class ContactApplicationServiceIntegrationTest {
 
         assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
         assertThat(contactFacade.getAcceptedContacts(recipient.id())).isEmpty();
+        assertThat(contactFacade.getBlockedContacts(sender.id()))
+                .extracting(ContactView::contactUserId)
+                .containsExactly(recipient.id());
+        assertThat(contactFacade.getBlockedContacts(recipient.id())).isEmpty();
         assertThat(contactFacade.findAcceptedContact(sender.id(), recipient.id())).isEmpty();
         assertThat(contactFacade.findAcceptedContact(recipient.id(), sender.id())).isEmpty();
     }
@@ -611,6 +615,8 @@ class ContactApplicationServiceIntegrationTest {
 
         assertThat(contactFacade.getAcceptedContacts(sender.id())).hasSize(1);
         assertThat(contactFacade.getAcceptedContacts(recipient.id())).hasSize(1);
+        assertThat(contactFacade.getBlockedContacts(sender.id())).isEmpty();
+        assertThat(contactFacade.getBlockedContacts(recipient.id())).isEmpty();
         assertThat(contactFacade.findAcceptedContact(sender.id(), recipient.id())).isPresent();
         assertThat(contactFacade.findAcceptedContact(recipient.id(), sender.id())).isPresent();
     }

@@ -207,6 +207,19 @@ class ContactApplicationService implements ContactFacade {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ContactView> getBlockedContacts(Long ownerUserId) {
+        log.info("Blocked contacts requested for userId={}", ownerUserId);
+        var blockedContacts = contactRelationshipRepository
+                .findAllByOwnerUserIdAndRelationshipStatusOrderByCreatedAtDesc(ownerUserId, RelationshipStatus.BLOCKED)
+                .stream()
+                .map(this::toContactView)
+                .toList();
+        log.info("Found {} blocked contacts for userId={}", blockedContacts.size(), ownerUserId);
+        return blockedContacts;
+    }
+
+    @Override
     public void blockContact(Long ownerUserId, Long contactUserId) {
         log.info("Block contact requested: ownerUserId={} , contactUserId={}", ownerUserId, contactUserId);
         var now = Instant.now(clock);

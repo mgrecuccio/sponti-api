@@ -166,6 +166,9 @@ Supported operations:
 - GET /contacts
   returns only ACCEPTED contacts
 
+- GET /contacts/blocked
+  returns contacts blocked by the authenticated user
+
 - GET /contacts/invitations/pending
   returns the list of pending invitations
 
