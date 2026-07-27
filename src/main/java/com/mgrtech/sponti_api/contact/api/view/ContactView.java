@@ -4,9 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-@Schema(description = "Accepted contact visible to the authenticated user.")
+@Schema(description = "Contact relationship visible to the authenticated user.")
 public record ContactView(
-        @Schema(description = "Internal id of the accepted contact user.", example = "24")
+        @Schema(description = "Internal id of the contact user.", example = "24")
         Long contactUserId,
         @Schema(description = "User-defined nickname for this contact.", example = "Gym buddy")
         String nickName,

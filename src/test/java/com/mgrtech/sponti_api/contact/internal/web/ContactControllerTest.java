@@ -62,6 +62,24 @@ class ContactControllerTest {
     }
 
     @Test
+    void returns_blocked_contact_list_for_authenticated_users() throws Exception {
+        given(contactFacade.getBlockedContacts(42L))
+                .willReturn(List.of(new ContactView(
+                        33L,
+                        "nickName",
+                        false,
+                        Instant.now()
+                )));
+
+        mockMvc.perform(get("/api/v1/contacts/blocked")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].contactUserId").value(33L))
+                .andExpect(jsonPath("$[0].nickName").value("nickName"))
+                .andExpect(jsonPath("$[0].favorite").value(false));
+    }
+
+    @Test
     void send_invitation_and_returns_contact_invitation_view() throws Exception {
         var request = new ContactController.SendContactInvitationRequest(
                 "recipient@example.com",

@@ -41,6 +41,13 @@ class ContactController {
         return contactFacade.getAcceptedContacts(ownerUserId);
     }
 
+    @GetMapping("/blocked")
+    @Operation(summary = "List blocked contacts", description = "Mobile blocked contacts screen. Returns contacts blocked by the authenticated user.")
+    public List<ContactView> getBlockedContacts(Authentication authentication) {
+        var ownerUserId = extractUserId(authentication);
+        return contactFacade.getBlockedContacts(ownerUserId);
+    }
+
     @PostMapping("/invitations")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Send contact invitation", description = "Invite a user by email. Conflict responses use CONTACT_INVITATION_ALREADY_EXISTS, CONTACT_ALREADY_EXISTS, or CONTACT_BLOCKED.")
