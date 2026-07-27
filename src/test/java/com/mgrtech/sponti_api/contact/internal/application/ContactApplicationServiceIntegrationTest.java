@@ -128,6 +128,23 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
+    void unblock_contact_throws_exception_when_sender_unblocks_self() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "unblock-self@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+
+        assertThatThrownBy(() -> contactFacade.unblockContact(
+                sender.id(),
+                sender.id()
+        )).isInstanceOf(CannotUnblockSelfException.class);
+    }
+
+    @Test
     void remove_contact_throws_exception_when_sender_removes_self() {
         var sender = userRegistrationFacade.createUser(
                 new CreateUserCommand(
@@ -529,6 +546,73 @@ class ContactApplicationServiceIntegrationTest {
 
         assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
         assertThat(contactFacade.getAcceptedContacts(recipient.id())).hasSize(1);
+    }
+
+    @Test
+    void block_contact_hides_effective_accepted_contact_for_both_users() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "block-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "block-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+        contactFacade.acceptInvitation(recipient.id(), invitation.id());
+
+        contactFacade.blockContact(sender.id(), recipient.id());
+
+        assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
+        assertThat(contactFacade.getAcceptedContacts(recipient.id())).isEmpty();
+        assertThat(contactFacade.findAcceptedContact(sender.id(), recipient.id())).isEmpty();
+        assertThat(contactFacade.findAcceptedContact(recipient.id(), sender.id())).isEmpty();
+    }
+
+    @Test
+    void unblock_contact_restores_effective_accepted_contact_for_both_users() {
+        var sender = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "unblock-sender@example.com",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "unblock-recipient@example.com",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.email(), "Teammate")
+        );
+        contactFacade.acceptInvitation(recipient.id(), invitation.id());
+        contactFacade.blockContact(sender.id(), recipient.id());
+
+        contactFacade.unblockContact(sender.id(), recipient.id());
+
+        assertThat(contactFacade.getAcceptedContacts(sender.id())).hasSize(1);
+        assertThat(contactFacade.getAcceptedContacts(recipient.id())).hasSize(1);
+        assertThat(contactFacade.findAcceptedContact(sender.id(), recipient.id())).isPresent();
+        assertThat(contactFacade.findAcceptedContact(recipient.id(), sender.id())).isPresent();
     }
 
     @Test

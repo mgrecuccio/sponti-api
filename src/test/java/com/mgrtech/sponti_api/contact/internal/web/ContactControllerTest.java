@@ -127,6 +127,15 @@ class ContactControllerTest {
     }
 
     @Test
+    void unblock_user_returns_no_content() throws Exception {
+        mockMvc.perform(post("/api/v1/contacts/{contactUserId}/unblock", "22")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isNoContent());
+
+        verify(contactFacade).unblockContact(42L, 22L);
+    }
+
+    @Test
     void accept_invitation_returns_no_content() throws Exception {
         mockMvc.perform(post("/api/v1/contacts/invitations/{invitationId}/accept", "22")
                         .principal(new TestingAuthenticationToken("42", null)))

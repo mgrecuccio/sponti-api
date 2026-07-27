@@ -92,6 +92,11 @@ public class ContactRelationshipEntity {
         this.updatedAt = now;
     }
 
+    public void unblock(Instant now) {
+        this.relationshipStatus = RelationshipStatus.ACCEPTED;
+        this.updatedAt = now;
+    }
+
     public void remove(Instant now) {
         this.relationshipStatus = RelationshipStatus.REMOVED;
         this.updatedAt = now;

@@ -100,6 +100,17 @@ class ContactController {
         contactFacade.blockContact(ownerUserId, contactUserId);
     }
 
+    @PostMapping("/{contactUserId}/unblock")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Unblock contact", description = "Authenticated user restores a previously blocked contact relationship.")
+    public void unblockContact(
+            Authentication authentication,
+            @PathVariable Long contactUserId
+    ) {
+        var ownerUserId = extractUserId(authentication);
+        contactFacade.unblockContact(ownerUserId, contactUserId);
+    }
+
     @DeleteMapping("/{contactUserId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove contact", description = "Authenticated user removes a contact from their accepted contacts list.")

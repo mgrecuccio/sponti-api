@@ -20,6 +20,7 @@ public class ContactExceptionHandler {
     @ExceptionHandler({
             CannotInviteSelfException.class,
             CannotBlockSelfException.class,
+            CannotUnblockSelfException.class,
             CannotRemoveSelfException.class,
             CannotEditSelfContactException.class
     })
