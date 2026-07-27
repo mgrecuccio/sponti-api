@@ -185,6 +185,7 @@ class ContactApplicationService implements ContactFacade {
         var acceptedContacts = contactRelationshipRepository
                 .findAllByOwnerUserIdAndRelationshipStatusOrderByCreatedAtDesc(ownerUserId, RelationshipStatus.ACCEPTED)
                 .stream()
+                .filter(relationship -> !hasAnyBlockingRelationship(ownerUserId, relationship.getContactUserId()))
                 .map(relationship -> new ContactView(
                         relationship.getContactUserId(),
                         relationship.getNickname(),
@@ -201,6 +202,7 @@ class ContactApplicationService implements ContactFacade {
     public Optional<ContactView> findAcceptedContact(Long userId, Long candidateUserId) {
         return contactRelationshipRepository
                 .findByOwnerUserIdAndAndContactUserIdAndRelationshipStatus(userId, candidateUserId, RelationshipStatus.ACCEPTED)
+                .filter(relationship -> !hasAnyBlockingRelationship(userId, candidateUserId))
                 .map(this::toContactView);
     }
 
@@ -220,6 +222,28 @@ class ContactApplicationService implements ContactFacade {
 
         relationship.block(now);
         log.info("OwnerUserId={} blocked contactUserId={}", ownerUserId, contactUserId);
+    }
+
+    @Override
+    public void unblockContact(Long ownerUserId, Long contactUserId) {
+        log.info("Unblock contact requested: ownerUserId={} , contactUserId={}", ownerUserId, contactUserId);
+        var now = Instant.now(clock);
+
+        if (ownerUserId.equals(contactUserId)) {
+            log.warn("Users cannot unblock themselves: ownerUserId={} contactUserId={}", ownerUserId, contactUserId);
+            throw new CannotUnblockSelfException();
+        }
+
+        var relationship = contactRelationshipRepository
+                .findByOwnerUserIdAndAndContactUserIdAndRelationshipStatus(
+                        ownerUserId,
+                        contactUserId,
+                        RelationshipStatus.BLOCKED
+                )
+                .orElseThrow(ContactNotFoundException::new);
+
+        relationship.unblock(now);
+        log.info("OwnerUserId={} unblocked contactUserId={}", ownerUserId, contactUserId);
     }
 
     @Override

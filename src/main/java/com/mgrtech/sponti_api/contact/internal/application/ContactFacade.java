@@ -18,6 +18,8 @@ public interface ContactFacade extends ContactQuery {
 
     void blockContact(Long ownerUserId, Long contactUserId);
 
+    void unblockContact(Long ownerUserId, Long contactUserId);
+
     void removeContact(Long ownerUserId, Long contactUserId);
 
     ContactView editContact(Long ownerUserId, Long contactUserId, EditContactCommand request);

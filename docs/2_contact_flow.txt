@@ -178,6 +178,9 @@ Supported operations:
 - POST /contacts/{contactUserId}/block
   blocks a contact
 
+- POST /contacts/{contactUserId}/unblock
+  unblocks a previously blocked contact
+
 - DELETE /contacts/{contactUserId}
   removes a contact
 
