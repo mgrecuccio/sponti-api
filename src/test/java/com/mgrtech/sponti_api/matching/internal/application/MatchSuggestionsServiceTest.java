@@ -64,6 +64,7 @@ class MatchSuggestionsServiceTest {
     private final UserContactInfoQuery userContactInfoQuery = mock(UserContactInfoQuery.class);
     private final UserProfileQuery userProfileQuery = mock(UserProfileQuery.class);
     private final MatchProposalRepository repository = mock(MatchProposalRepository.class);
+    private final MatchProposalExpirationService expirationService = new MatchProposalExpirationService(repository);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     private MatchSuggestionsService service;
@@ -79,6 +80,7 @@ class MatchSuggestionsServiceTest {
                 userContactInfoQuery,
                 userProfileQuery,
                 repository,
+                expirationService,
                 eventPublisher,
                 new OperationalMetrics(new SimpleMeterRegistry())
         );
@@ -249,7 +251,7 @@ class MatchSuggestionsServiceTest {
                 .isInstanceOf(MatchProposalExpiredException.class)
                 .hasMessage("Match proposal has expired");
 
-        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED);
     }
 
     @Test
@@ -304,7 +306,7 @@ class MatchSuggestionsServiceTest {
                 .isInstanceOf(MatchProposalExpiredException.class)
                 .hasMessage("Match proposal has expired");
 
-        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+        assertThat(suggestion.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED);
     }
 
     @Test

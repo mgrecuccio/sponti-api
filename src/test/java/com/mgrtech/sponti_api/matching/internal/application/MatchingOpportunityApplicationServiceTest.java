@@ -26,6 +26,7 @@ class MatchingOpportunityApplicationServiceTest {
 
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery = mock(UserMatchingPreferencesQuery.class);
     private final MatchSuggestionsService matchSuggestionsService = mock(MatchSuggestionsService.class);
+    private final MatchProposalExpirationService expirationService = mock(MatchProposalExpirationService.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     private MatchingOpportunityApplicationService service;
@@ -38,6 +39,7 @@ class MatchingOpportunityApplicationServiceTest {
                 new MatchingOpportunitySchedulerProperties(true, Duration.ofMinutes(5)),
                 userMatchingPreferencesQuery,
                 matchSuggestionsService,
+                expirationService,
                 eventPublisher
         );
     }
@@ -101,6 +103,7 @@ class MatchingOpportunityApplicationServiceTest {
 
         service.checkCurrentOpportunities();
 
+        verify(expirationService).expireDueProposals(NOW);
         verify(matchSuggestionsService).getSuggestions(1L);
         verify(matchSuggestionsService).getSuggestions(2L);
     }

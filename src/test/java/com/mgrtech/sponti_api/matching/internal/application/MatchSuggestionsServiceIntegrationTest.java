@@ -274,6 +274,72 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
+    void create_match_expires_due_proposals_before_checking_duplicates() {
+        var initiator = createUser("expired-retry-initiator", "Expired Retry Initiator");
+        createChatAvailability(initiator.id(), LocalTime.of(10, 0));
+        var candidate = createUser("expired-retry-candidate", "Expired Retry Candidate");
+        createChatAvailability(candidate.id(), LocalTime.of(10, 0));
+        createAcceptedContact(initiator.id(), candidate, true);
+
+        var expiredProposal = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T08:00:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+
+        var retried = matchingFacade.createMatch(
+                initiator.id(),
+                new CreateMatchCommand(candidate.id(), ChannelType.CHAT)
+        );
+
+        assertThat(matchProposalRepository.findById(expiredProposal.getId()))
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED));
+        assertThat(matchProposalRepository.findById(retried.id()))
+                .hasValueSatisfying(entity -> {
+                    assertThat(entity.getInitiatorUserId()).isEqualTo(initiator.id());
+                    assertThat(entity.getCandidateUserId()).isEqualTo(candidate.id());
+                    assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+                });
+    }
+
+    @Test
+    void create_reverse_match_expires_due_proposals_before_checking_duplicates() {
+        var initiator = createUser("expired-reverse-initiator", "Expired Reverse Initiator");
+        createChatAvailability(initiator.id(), LocalTime.of(10, 0));
+        var candidate = createUser("expired-reverse-candidate", "Expired Reverse Candidate");
+        createChatAvailability(candidate.id(), LocalTime.of(10, 0));
+        createAcceptedContact(initiator.id(), candidate, true);
+
+        var expiredProposal = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T08:00:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+
+        var reversed = matchingFacade.createMatch(
+                candidate.id(),
+                new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
+        );
+
+        assertThat(matchProposalRepository.findById(expiredProposal.getId()))
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED));
+        assertThat(matchProposalRepository.findById(reversed.id()))
+                .hasValueSatisfying(entity -> {
+                    assertThat(entity.getInitiatorUserId()).isEqualTo(candidate.id());
+                    assertThat(entity.getCandidateUserId()).isEqualTo(initiator.id());
+                    assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED);
+                });
+    }
+
+    @Test
     void create_match_fails_when_requested_channel_is_not_allowed() {
         var initiator = createUser("channel-not-allowed-initiator", "Channel Not Allowed Initiator");
         var candidate = createUser("channel-not-allowed-candidate", "Channel Not Allowed Candidate");
@@ -392,7 +458,7 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .hasMessage("Match proposal has expired");
 
         assertThat(matchProposalRepository.findById(suggestion.getId()))
-                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED));
     }
 
     @Test
@@ -462,7 +528,7 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .hasMessage("Match proposal has expired");
 
         assertThat(matchProposalRepository.findById(suggestion.getId()))
-                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.PROPOSED));
+                .hasValueSatisfying(entity -> assertThat(entity.getStatus()).isEqualTo(MatchProposalStatus.EXPIRED));
     }
 
     @Test
