@@ -29,11 +29,15 @@ public record MatchInvitationView(
         @Schema(description = "Timestamp when candidate accepted or declined.", example = "2026-06-12T12:01:00Z", nullable = true)
         Instant respondedAt
 ) {
-    public static MatchInvitationView toMatchInvitationView(MatchProposalEntity entity) {
+
+    public static MatchInvitationView toMatchInvitationView(
+            MatchProposalEntity entity,
+            String initiatorDisplayName
+    ) {
         return new MatchInvitationView(
                 entity.getId(),
                 entity.getInitiatorUserId(),
-                null,
+                initiatorDisplayName,
                 entity.getChannelType(),
                 entity.getStatus().name(),
                 entity.getScore(),

@@ -8,17 +8,8 @@ import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
-import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
-import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
-import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
-import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
-import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
-import com.mgrtech.sponti_api.user.api.view.CreatedUserView;
-import com.mgrtech.sponti_api.user.api.view.UserCredentialsView;
-import com.mgrtech.sponti_api.user.api.view.UserLookupView;
-import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
-import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
-import com.mgrtech.sponti_api.user.api.view.UserProfileView;
+import com.mgrtech.sponti_api.user.api.query.*;
+import com.mgrtech.sponti_api.user.api.view.*;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
 import com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity;
 import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
@@ -29,9 +20,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
@@ -75,6 +69,19 @@ public class UserApplicationService implements
     public Optional<UserProfileView> getProfileById(Long userId) {
         return userRepository.findById(userId)
                 .map(UserEntity::toProfileView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, UserProfileView> getProfilesByIds(Collection<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return userRepository.findAllById(userIds)
+                .stream()
+                .map(UserEntity::toProfileView)
+                .collect(Collectors.toMap(UserProfileView::id, Function.identity()));
     }
 
     @Override
