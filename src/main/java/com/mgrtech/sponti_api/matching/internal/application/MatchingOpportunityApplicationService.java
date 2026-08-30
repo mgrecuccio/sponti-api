@@ -28,10 +28,12 @@ class MatchingOpportunityApplicationService {
     private final MatchingOpportunitySchedulerProperties schedulerProperties;
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
     private final MatchSuggestionsService matchSuggestionsService;
+    private final MatchProposalExpirationService expirationService;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void checkCurrentOpportunities() {
+        expirationService.expireDueProposals(Instant.now(clock));
         var userIds = userMatchingPreferencesQuery.getMatchingEnabledUserIds();
         log.info("Checking matching opportunities: userCount={}", userIds.size());
         userIds.forEach(this::checkCurrentOpportunitiesForUser);

@@ -61,6 +61,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     private final UserContactInfoQuery userContactInfoQuery;
     private final UserProfileQuery userProfileQuery;
     private final MatchProposalRepository repository;
+    private final MatchProposalExpirationService expirationService;
     private final ApplicationEventPublisher eventPublisher;
     private final OperationalMetrics metrics;
 
@@ -80,6 +81,8 @@ public class MatchSuggestionsService implements MatchingFacade {
 
         var contact = contactQuery.findAcceptedContact(userId, candidateUserId)
                 .orElseThrow(() -> new AcceptedContactNotFoundException("Candidate is not an accepted contact."));
+
+        expirationService.expireDueProposals(now);
 
         if(hasBlockingProposal(userId, candidateUserId, now)) {
             throw new MatchAlreadyExistsException(MATCH_ALREADY_EXISTS_MESSAGE);
@@ -148,7 +151,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = MatchProposalExpiredException.class)
     public MatchView acceptMatch(Long candidateUserId, Long proposalId) {
         log.info("Candidate user id = {} is accepting the proposal id ={}", candidateUserId, proposalId);
         var now = Instant.now(clock);
@@ -157,7 +160,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
 
-        proposal.ensureNotExpired(now);
+        expirationService.ensureNotExpired(proposal, now);
 
         if(!userContactInfoQuery.hasPhoneNumber(candidateUserId)) {
             throw new PhoneNumberRequiredException("Phone number required for accepting a match.");
@@ -172,7 +175,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = MatchProposalExpiredException.class)
     public MatchView declineMatch(Long candidateUserId, Long proposalId) {
         log.info("Candidate user id = {} is declining the proposal id ={}", candidateUserId, proposalId);
         var now = Instant.now(clock);
@@ -180,7 +183,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                 .orElseThrow(
                         () -> new MatchNotFoundException("Match proposal not found")
                 );
-        proposal.ensureNotExpired(now);
+        expirationService.ensureNotExpired(proposal, now);
         proposal.declineBy(candidateUserId);
         metrics.matchProposalResponded("declined");
         log.info("Proposal id = {} declined by candidate user id = {}", proposal.getId(), candidateUserId);

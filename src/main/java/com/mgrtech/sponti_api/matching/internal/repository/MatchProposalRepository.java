@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.matching.internal.repository;
 
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalEntity;
 import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalStatus;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -10,6 +11,20 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MatchProposalRepository extends JpaRepository<MatchProposalEntity, Long> {
+
+    @Modifying
+    @Query("""
+            UPDATE MatchProposalEntity proposal
+            SET proposal.status = :expiredStatus
+            WHERE proposal.status = :proposedStatus
+              AND proposal.expiresAt IS NOT NULL
+              AND proposal.expiresAt <= :now
+            """)
+    int expireDueProposals(
+            MatchProposalStatus proposedStatus,
+            MatchProposalStatus expiredStatus,
+            Instant now
+    );
 
     Optional<MatchProposalEntity> findByIdAndCandidateUserId(Long id, Long candidateUserId);
 
