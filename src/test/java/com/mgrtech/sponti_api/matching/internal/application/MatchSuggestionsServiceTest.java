@@ -25,6 +25,8 @@ import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +40,9 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,6 +62,7 @@ class MatchSuggestionsServiceTest {
     private final ContactQuery contactQuery = mock(ContactQuery.class);
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery = mock(UserMatchingPreferencesQuery.class);
     private final UserContactInfoQuery userContactInfoQuery = mock(UserContactInfoQuery.class);
+    private final UserProfileQuery userProfileQuery = mock(UserProfileQuery.class);
     private final MatchProposalRepository repository = mock(MatchProposalRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
@@ -72,6 +77,7 @@ class MatchSuggestionsServiceTest {
                 contactQuery,
                 userMatchingPreferencesQuery,
                 userContactInfoQuery,
+                userProfileQuery,
                 repository,
                 eventPublisher,
                 new OperationalMetrics(new SimpleMeterRegistry())
@@ -83,6 +89,18 @@ class MatchSuggestionsServiceTest {
                 .thenReturn(Optional.of(preferences(USER_ID, true, true, null, null)));
         when(userMatchingPreferencesQuery.getMatchingPreferences(CANDIDATE_ID))
                 .thenReturn(Optional.of(preferences(CANDIDATE_ID, true, true, null, null)));
+        when(userProfileQuery.getProfilesByIds(Set.of(USER_ID)))
+                .thenReturn(Map.of(
+                        USER_ID,
+                        new UserProfileView(USER_ID, "initiator@example.com", "Initiator User", "ACTIVE", "UTC")
+                ));
+        when(userProfileQuery.getProfilesByIds(Set.of(USER_ID, CANDIDATE_ID)))
+                .thenReturn(Map.of(
+                        USER_ID,
+                        new UserProfileView(USER_ID, "initiator@example.com", "Initiator User", "ACTIVE", "UTC"),
+                        CANDIDATE_ID,
+                        new UserProfileView(CANDIDATE_ID, "candidate@example.com", "Candidate User", "ACTIVE", "UTC")
+                ));
         when(contactQuery.getAcceptedContacts(USER_ID))
                 .thenReturn(List.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
     }
@@ -348,12 +366,13 @@ class MatchSuggestionsServiceTest {
 
         var incoming = service.getIncomingMatches(CANDIDATE_ID);
 
+        verify(userProfileQuery).getProfilesByIds(Set.of(USER_ID));
         assertThat(incoming).hasSize(1);
         assertThat(incoming.getFirst())
                 .satisfies(match -> {
                     assertThat(match.id()).isEqualTo(10L);
                     assertThat(match.initiatorUserId()).isEqualTo(USER_ID);
-                    assertThat(match.initiatorDisplayName()).isNull();
+                    assertThat(match.initiatorDisplayName()).isEqualTo("Initiator User");
                     assertThat(match.channelType()).isEqualTo(ChannelType.CHAT);
                     assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name());
                     assertThat(match.score()).isEqualTo(90);
@@ -381,12 +400,16 @@ class MatchSuggestionsServiceTest {
 
         var accepted = service.getAcceptedMatches(USER_ID);
 
+        verify(userProfileQuery).getProfilesByIds(Set.of(USER_ID, CANDIDATE_ID));
         assertThat(accepted)
                 .extracting(MatchInvitationView::status)
                 .containsOnly(MatchProposalStatus.ACCEPTED.name());
         assertThat(accepted)
                 .extracting(MatchInvitationView::id)
                 .containsExactly(10L, 11L);
+        assertThat(accepted)
+                .extracting(MatchInvitationView::initiatorDisplayName)
+                .containsExactly("Initiator User", "Candidate User");
     }
 
     @Test

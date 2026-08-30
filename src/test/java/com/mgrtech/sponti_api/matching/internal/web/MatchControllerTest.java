@@ -73,7 +73,7 @@ public class MatchControllerTest {
                 .willReturn(List.of(new MatchInvitationView(
                         99L,
                         11L,
-                        null,
+                        "Incoming Initiator",
                         ChannelType.CHAT,
                         "PROPOSED",
                         188,
@@ -88,6 +88,7 @@ public class MatchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(99L))
                 .andExpect(jsonPath("$[0].initiatorUserId").value(11L))
+                .andExpect(jsonPath("$[0].initiatorDisplayName").value("Incoming Initiator"))
                 .andExpect(jsonPath("$[0].channelType").value("CHAT"))
                 .andExpect(jsonPath("$[0].status").value("PROPOSED"))
                 .andExpect(jsonPath("$[0].score").value(188))
@@ -102,7 +103,7 @@ public class MatchControllerTest {
                 .willReturn(List.of(new MatchInvitationView(
                         99L,
                         11L,
-                        null,
+                        "Accepted Initiator",
                         ChannelType.CHAT,
                         "ACCEPTED",
                         188,
@@ -117,6 +118,7 @@ public class MatchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(99L))
                 .andExpect(jsonPath("$[0].initiatorUserId").value(11L))
+                .andExpect(jsonPath("$[0].initiatorDisplayName").value("Accepted Initiator"))
                 .andExpect(jsonPath("$[0].channelType").value("CHAT"))
                 .andExpect(jsonPath("$[0].status").value("ACCEPTED"))
                 .andExpect(jsonPath("$[0].respondedAt").value("2026-03-30T09:30:00Z"));

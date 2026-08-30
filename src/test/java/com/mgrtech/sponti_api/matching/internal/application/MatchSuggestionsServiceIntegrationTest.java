@@ -573,6 +573,15 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .extracting(MatchInvitationView::id)
                 .containsExactlyInAnyOrder(secondIncoming.getId(), incoming.getId());
         assertThat(invitations)
+                .anySatisfy(match -> {
+                    assertThat(match.id()).isEqualTo(incoming.getId());
+                    assertThat(match.initiatorDisplayName()).isEqualTo("Incoming Initiator");
+                })
+                .anySatisfy(match -> {
+                    assertThat(match.id()).isEqualTo(secondIncoming.getId());
+                    assertThat(match.initiatorDisplayName()).isEqualTo("Incoming Other Initiator");
+                });
+        assertThat(invitations)
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name()));
     }
 
@@ -633,6 +642,15 @@ public class MatchSuggestionsServiceIntegrationTest {
         assertThat(matches)
                 .extracting(MatchInvitationView::id)
                 .containsExactlyInAnyOrder(initiatedByUser.getId(), initiatedByOtherUser.getId());
+        assertThat(matches)
+                .anySatisfy(match -> {
+                    assertThat(match.id()).isEqualTo(initiatedByUser.getId());
+                    assertThat(match.initiatorDisplayName()).isEqualTo("Accepted User");
+                })
+                .anySatisfy(match -> {
+                    assertThat(match.id()).isEqualTo(initiatedByOtherUser.getId());
+                    assertThat(match.initiatorDisplayName()).isEqualTo("Accepted Initiator");
+                });
         assertThat(matches)
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.ACCEPTED.name()));
     }

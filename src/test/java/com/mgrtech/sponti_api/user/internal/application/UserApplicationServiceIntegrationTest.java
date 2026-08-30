@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -122,6 +123,22 @@ class UserApplicationServiceIntegrationTest {
 
         assertThat(userContactInfoQuery.hasPhoneNumber(created.id())).isTrue();
         assertThat(userContactInfoQuery.getPhoneNumber(created.id())).contains(phoneNumber);
+    }
+
+    @Test
+    void get_profiles_by_ids_returns_profiles_keyed_by_user_id() {
+        var first = userRegistrationFacade.createUser(
+                new CreateUserCommand("first@email.com", "password-hash", "First User", "UTC")
+        );
+        var second = userRegistrationFacade.createUser(
+                new CreateUserCommand("second@email.com", "password-hash", "Second User", "UTC")
+        );
+
+        var profiles = userProfileQuery.getProfilesByIds(List.of(first.id(), second.id(), 999L, first.id()));
+
+        assertThat(profiles).hasSize(2);
+        assertThat(profiles.get(first.id()).displayName()).isEqualTo("First User");
+        assertThat(profiles.get(second.id()).displayName()).isEqualTo("Second User");
     }
 
     @Test

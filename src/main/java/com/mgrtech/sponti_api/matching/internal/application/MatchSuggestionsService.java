@@ -23,7 +23,9 @@ import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
+import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserMatchingPreferencesView;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ import java.time.*;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.mgrtech.sponti_api.matching.api.MatchView.toMatchView;
 
@@ -56,6 +59,7 @@ public class MatchSuggestionsService implements MatchingFacade {
     private final ContactQuery contactQuery;
     private final UserMatchingPreferencesQuery userMatchingPreferencesQuery;
     private final UserContactInfoQuery userContactInfoQuery;
+    private final UserProfileQuery userProfileQuery;
     private final MatchProposalRepository repository;
     private final ApplicationEventPublisher eventPublisher;
     private final OperationalMetrics metrics;
@@ -255,15 +259,25 @@ public class MatchSuggestionsService implements MatchingFacade {
             boolean includeInitiated,
             boolean requireUnexpired
     ) {
-        return repository.findVisibleByUserIdAndStatus(
+        var proposals = repository.findVisibleByUserIdAndStatus(
                         userId,
                         status,
                         Instant.now(clock),
                         includeInitiated,
                         requireUnexpired
-                )
+                );
+        var profilesById = userProfileQuery.getProfilesByIds(proposals.stream()
+                .map(MatchProposalEntity::getInitiatorUserId)
+                .collect(Collectors.toSet()));
+
+        return proposals
                 .stream()
-                .map(MatchInvitationView::toMatchInvitationView)
+                .map(proposal -> MatchInvitationView.toMatchInvitationView(
+                        proposal,
+                        Optional.ofNullable(profilesById.get(proposal.getInitiatorUserId()))
+                                .map(UserProfileView::displayName)
+                                .orElse(null)
+                ))
                 .toList();
     }
 
