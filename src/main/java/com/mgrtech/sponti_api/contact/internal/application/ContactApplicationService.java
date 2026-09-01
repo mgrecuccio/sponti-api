@@ -16,6 +16,7 @@ import com.mgrtech.sponti_api.contact.internal.repository.ContactRelationshipRep
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
+import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import lombok.AllArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -182,16 +183,20 @@ class ContactApplicationService implements ContactFacade {
     @Transactional(readOnly = true)
     public List<ContactView> getAcceptedContacts(Long ownerUserId) {
         log.info("Accepted contacts requested for userId={}", ownerUserId);
-        var acceptedContacts = contactRelationshipRepository
+        var relationships = contactRelationshipRepository
                 .findAllByOwnerUserIdAndRelationshipStatusOrderByCreatedAtDesc(ownerUserId, RelationshipStatus.ACCEPTED)
                 .stream()
                 .filter(relationship -> !hasAnyBlockingRelationship(ownerUserId, relationship.getContactUserId()))
-                .map(relationship -> new ContactView(
-                        relationship.getContactUserId(),
-                        relationship.getNickname(),
-                        relationship.isFavorite(),
-                        relationship.getCreatedAt()
-                ))
+                .toList();
+
+        var profilesById = userProfileQuery.getProfilesByIds(
+                relationships.stream()
+                        .map(ContactRelationshipEntity::getContactUserId)
+                        .toList()
+        );
+
+        var acceptedContacts = relationships.stream()
+                .map(relationship -> toContactView(relationship, profilesById))
                 .toList();
         log.info("Found {} accepted contacts for userId={}", acceptedContacts.size(), ownerUserId);
         return acceptedContacts;
@@ -313,9 +318,29 @@ class ContactApplicationService implements ContactFacade {
     }
 
     private ContactView toContactView(ContactRelationshipEntity relationship) {
+        var displayName = userProfileQuery.getProfileById(relationship.getContactUserId())
+                .map(profile -> profile.displayName())
+                .orElse(null);
+
         return new ContactView(
                 relationship.getContactUserId(),
                 relationship.getNickname(),
+                displayName,
+                relationship.isFavorite(),
+                relationship.getCreatedAt()
+        );
+    }
+
+    private ContactView toContactView(
+            ContactRelationshipEntity relationship,
+            Map<Long, UserProfileView> profilesById
+    ) {
+        var profile = profilesById.get(relationship.getContactUserId());
+
+        return new ContactView(
+                relationship.getContactUserId(),
+                relationship.getNickname(),
+                profile != null ? profile.displayName() : null,
                 relationship.isFavorite(),
                 relationship.getCreatedAt()
         );
@@ -355,7 +380,6 @@ class ContactApplicationService implements ContactFacade {
                 invitation.getSenderUserId(),
                 senderProfile.email(),
                 senderProfile.displayName(),
-                invitation.getNickName(),
                 invitation.getStatusString(),
                 invitation.getCreatedAt()
         );

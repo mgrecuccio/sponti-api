@@ -14,8 +14,6 @@ public record PendingContactInvitationView(
         String senderEmail,
         @Schema(description = "Sender display name.", example = "Sender")
         String senderDisplayName,
-        @Schema(description = "Nickname proposed by the sender.", example = "Team mate")
-        String nickName,
         @Schema(description = "Invitation status.", example = "PENDING")
         String status,
         @Schema(description = "Invitation creation timestamp.", example = "2026-06-12T12:00:00Z")
