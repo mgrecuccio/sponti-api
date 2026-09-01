@@ -49,6 +49,7 @@ class ContactControllerTest {
                 .willReturn(List.of(new ContactView(
                         33L,
                         "nickName",
+                        "Marco",
                         true,
                         Instant.now()
                 )));
@@ -58,6 +59,7 @@ class ContactControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].contactUserId").value(33L))
                 .andExpect(jsonPath("$[0].nickName").value("nickName"))
+                .andExpect(jsonPath("$[0].displayName").value("Marco"))
                 .andExpect(jsonPath("$[0].favorite").value(true));
     }
 
@@ -278,7 +280,6 @@ class ContactControllerTest {
                         18L,
                         "sender@example.com",
                         "Sender",
-                        "Team mate",
                         "PENDING",
                         Instant.now()
                 )));
@@ -290,7 +291,7 @@ class ContactControllerTest {
                 .andExpect(jsonPath("$[0].senderUserId").value(18L))
                 .andExpect(jsonPath("$[0].senderEmail").value("sender@example.com"))
                 .andExpect(jsonPath("$[0].senderDisplayName").value("Sender"))
-                .andExpect(jsonPath("$[0].nickName").value("Team mate"))
+                .andExpect(jsonPath("$[0].nickName").doesNotExist())
                 .andExpect(jsonPath("$[0].status").value("PENDING"));
     }
 }

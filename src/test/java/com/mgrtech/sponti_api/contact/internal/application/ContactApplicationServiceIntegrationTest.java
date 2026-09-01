@@ -67,12 +67,14 @@ class ContactApplicationServiceIntegrationTest {
         assertThat(senderContacts).hasSize(1);
         assertThat(senderContacts.getFirst().contactUserId()).isEqualTo(recipient.id());
         assertThat(senderContacts.getFirst().nickName()).isEqualTo("Teammate");
+        assertThat(senderContacts.getFirst().displayName()).isEqualTo("Recipient");
         assertThat(senderContacts.getFirst().favorite()).isFalse();
 
         var recipientContacts = contactFacade.getAcceptedContacts(recipient.id());
         assertThat(recipientContacts).hasSize(1);
         assertThat(recipientContacts.getFirst().contactUserId()).isEqualTo(sender.id());
         assertThat(recipientContacts.getFirst().nickName()).isNull();
+        assertThat(recipientContacts.getFirst().displayName()).isEqualTo("Sender");
         assertThat(recipientContacts.getFirst().favorite()).isFalse();
     }
 
@@ -764,14 +766,12 @@ class ContactApplicationServiceIntegrationTest {
         assertThat(pending.getFirst().senderUserId()).isEqualTo(senderTwo.id());
         assertThat(pending.getFirst().senderEmail()).isEqualTo(senderTwo.email());
         assertThat(pending.getFirst().senderDisplayName()).isEqualTo(senderTwo.displayName());
-        assertThat(pending.getFirst().nickName()).isEqualTo("New teammate Two");
         assertThat(pending.getFirst().status()).isEqualTo("PENDING");
 
         assertThat(pending.get(1).invitationId()).isEqualTo(pendingFromSenderOne.id());
         assertThat(pending.get(1).senderUserId()).isEqualTo(senderOne.id());
         assertThat(pending.get(1).senderEmail()).isEqualTo(senderOne.email());
         assertThat(pending.get(1).senderDisplayName()).isEqualTo(senderOne.displayName());
-        assertThat(pending.get(1).nickName()).isEqualTo("New teammate One");
         assertThat(pending.get(1).status()).isEqualTo("PENDING");
     }
 
