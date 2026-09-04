@@ -642,10 +642,16 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(incoming.getId());
                     assertThat(match.initiatorDisplayName()).isEqualTo("Incoming Initiator");
+                    assertThat(match.candidateDisplayName()).isEqualTo("Incoming Candidate");
+                    assertThat(match.otherParticipantUserId()).isEqualTo(initiator.id());
+                    assertThat(match.otherParticipantDisplayName()).isEqualTo("Incoming Initiator");
                 })
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(secondIncoming.getId());
                     assertThat(match.initiatorDisplayName()).isEqualTo("Incoming Other Initiator");
+                    assertThat(match.candidateDisplayName()).isEqualTo("Incoming Candidate");
+                    assertThat(match.otherParticipantUserId()).isEqualTo(otherInitiator.id());
+                    assertThat(match.otherParticipantDisplayName()).isEqualTo("Incoming Other Initiator");
                 });
         assertThat(invitations)
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name()));
@@ -712,10 +718,18 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(initiatedByUser.getId());
                     assertThat(match.initiatorDisplayName()).isEqualTo("Accepted User");
+                    assertThat(match.candidateUserId()).isEqualTo(candidate.id());
+                    assertThat(match.candidateDisplayName()).isEqualTo("Accepted Candidate");
+                    assertThat(match.otherParticipantUserId()).isEqualTo(candidate.id());
+                    assertThat(match.otherParticipantDisplayName()).isEqualTo("Accepted Candidate");
                 })
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(initiatedByOtherUser.getId());
                     assertThat(match.initiatorDisplayName()).isEqualTo("Accepted Initiator");
+                    assertThat(match.candidateUserId()).isEqualTo(user.id());
+                    assertThat(match.candidateDisplayName()).isEqualTo("Accepted User");
+                    assertThat(match.otherParticipantUserId()).isEqualTo(initiator.id());
+                    assertThat(match.otherParticipantDisplayName()).isEqualTo("Accepted Initiator");
                 });
         assertThat(matches)
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.ACCEPTED.name()));

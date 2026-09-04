@@ -14,6 +14,14 @@ public record MatchInvitationView(
         Long initiatorUserId,
         @Schema(description = "Initiator display name if available.", example = "Marco", nullable = true)
         String initiatorDisplayName,
+        @Schema(description = "Internal candidate user id.", example = "24")
+        Long candidateUserId,
+        @Schema(description = "Candidate display name if available.", example = "Alice", nullable = true)
+        String candidateDisplayName,
+        @Schema(description = "The participant other than the authenticated user.", example = "18")
+        Long otherParticipantUserId,
+        @Schema(description = "Display name for the participant other than the authenticated user, if available.", example = "Marco", nullable = true)
+        String otherParticipantDisplayName,
         @Schema(description = "Requested communication channel.", example = "CHAT")
         ChannelType channelType,
         @Schema(description = "Proposal status.", example = "PROPOSED")
@@ -32,12 +40,23 @@ public record MatchInvitationView(
 
     public static MatchInvitationView toMatchInvitationView(
             MatchProposalEntity entity,
-            String initiatorDisplayName
+            Long currentUserId,
+            String initiatorDisplayName,
+            String candidateDisplayName
     ) {
+        var otherParticipantUserId = entity.otherParticipantId(currentUserId);
+        var otherParticipantDisplayName = entity.getInitiatorUserId().equals(otherParticipantUserId)
+                ? initiatorDisplayName
+                : candidateDisplayName;
+
         return new MatchInvitationView(
                 entity.getId(),
                 entity.getInitiatorUserId(),
                 initiatorDisplayName,
+                entity.getCandidateUserId(),
+                candidateDisplayName,
+                otherParticipantUserId,
+                otherParticipantDisplayName,
                 entity.getChannelType(),
                 entity.getStatus().name(),
                 entity.getScore(),

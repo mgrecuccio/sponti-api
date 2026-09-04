@@ -37,8 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.mgrtech.sponti_api.matching.api.MatchView.toMatchView;
 
@@ -270,18 +272,27 @@ public class MatchSuggestionsService implements MatchingFacade {
                         requireUnexpired
                 );
         var profilesById = userProfileQuery.getProfilesByIds(proposals.stream()
-                .map(MatchProposalEntity::getInitiatorUserId)
+                .flatMap(proposal -> Stream.of(
+                        proposal.getInitiatorUserId(),
+                        proposal.getCandidateUserId()
+                ))
                 .collect(Collectors.toSet()));
 
         return proposals
                 .stream()
                 .map(proposal -> MatchInvitationView.toMatchInvitationView(
                         proposal,
-                        Optional.ofNullable(profilesById.get(proposal.getInitiatorUserId()))
-                                .map(UserProfileView::displayName)
-                                .orElse(null)
+                        userId,
+                        displayName(profilesById, proposal.getInitiatorUserId()),
+                        displayName(profilesById, proposal.getCandidateUserId())
                 ))
                 .toList();
+    }
+
+    private String displayName(Map<Long, UserProfileView> profilesById, Long userId) {
+        return Optional.ofNullable(profilesById.get(userId))
+                .map(UserProfileView::displayName)
+                .orElse(null);
     }
 
     private MatchProposalEntity createProposal(
