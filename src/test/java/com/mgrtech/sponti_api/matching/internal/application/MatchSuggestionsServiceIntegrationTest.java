@@ -100,6 +100,7 @@ public class MatchSuggestionsServiceIntegrationTest {
         assertThat(suggestions).satisfiesExactly(
                 match -> {
                     assertThat(match.candidateUserId()).isEqualTo(candidate.id());
+                    assertThat(match.candidateDisplayName()).isEqualTo("Candidate");
                     assertThat(match.score()).isEqualTo(expectedScore);
                 });
 
