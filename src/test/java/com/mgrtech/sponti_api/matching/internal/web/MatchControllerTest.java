@@ -51,6 +51,7 @@ public class MatchControllerTest {
                 .willReturn(List.of(new SuggestedMatchView(
                         33L,
                         "nickName",
+                        "Candidate User",
                         true,
                         ChannelType.CHAT,
                         123,
@@ -63,6 +64,7 @@ public class MatchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].candidateUserId").value(33L))
                 .andExpect(jsonPath("$[0].nickName").value("nickName"))
+                .andExpect(jsonPath("$[0].candidateDisplayName").value("Candidate User"))
                 .andExpect(jsonPath("$[0].favorite").value(true))
                 .andExpect(jsonPath("$[0].score").value(123));
     }

@@ -104,7 +104,13 @@ class MatchSuggestionsServiceTest {
                         new UserProfileView(CANDIDATE_ID, "candidate@example.com", "Candidate User", "ACTIVE", "UTC")
                 ));
         when(contactQuery.getAcceptedContacts(USER_ID))
-                .thenReturn(List.of(new ContactView(CANDIDATE_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
+                .thenReturn(List.of(new ContactView(
+                        CANDIDATE_ID,
+                        "Marco",
+                        "Candidate User",
+                        true,
+                        NOW.minus(Duration.ofDays(10))
+                )));
     }
 
     @Test
@@ -519,6 +525,7 @@ class MatchSuggestionsServiceTest {
         var suggestions = service.getSuggestions(USER_ID);
 
         assertThat(suggestions).hasSize(1);
+        assertThat(suggestions.getFirst().candidateDisplayName()).isEqualTo("Candidate User");
         assertThat(suggestions.getFirst().score()).isEqualTo(60);
     }
 

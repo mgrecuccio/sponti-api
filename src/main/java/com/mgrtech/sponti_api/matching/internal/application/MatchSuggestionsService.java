@@ -363,6 +363,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                 .map(scoredCandidate -> new SuggestedMatchView(
                         candidateUserId,
                         contact.nickName(),
+                        contact.displayName(),
                         contact.favorite(),
                         scoredCandidate.overlap().channelType(),
                         scoredCandidate.score(),

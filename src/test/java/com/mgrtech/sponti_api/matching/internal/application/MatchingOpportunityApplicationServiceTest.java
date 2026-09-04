@@ -112,6 +112,7 @@ class MatchingOpportunityApplicationServiceTest {
         return new SuggestedMatchView(
                 candidateUserId,
                 "Candidate " + candidateUserId,
+                "Candidate Display " + candidateUserId,
                 false,
                 ChannelType.CHAT,
                 score,

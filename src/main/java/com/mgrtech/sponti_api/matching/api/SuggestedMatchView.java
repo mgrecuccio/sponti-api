@@ -11,6 +11,8 @@ public record SuggestedMatchView(
         Long candidateUserId,
         @Schema(description = "Authenticated user's nickname for this contact.", example = "Gym buddy")
         String nickName,
+        @Schema(description = "Suggested candidate user's profile display name.", example = "Giuda", nullable = true)
+        String candidateDisplayName,
         @Schema(description = "Whether the candidate is marked favorite by the authenticated user.", example = "true")
         boolean favorite,
         @Schema(description = "Suggested communication channel.", example = "CHAT")
