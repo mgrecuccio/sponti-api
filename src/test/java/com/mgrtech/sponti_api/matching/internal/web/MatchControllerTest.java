@@ -74,6 +74,10 @@ public class MatchControllerTest {
                         99L,
                         11L,
                         "Incoming Initiator",
+                        42L,
+                        "Current User",
+                        11L,
+                        "Incoming Initiator",
                         ChannelType.CHAT,
                         "PROPOSED",
                         188,
@@ -89,6 +93,10 @@ public class MatchControllerTest {
                 .andExpect(jsonPath("$[0].id").value(99L))
                 .andExpect(jsonPath("$[0].initiatorUserId").value(11L))
                 .andExpect(jsonPath("$[0].initiatorDisplayName").value("Incoming Initiator"))
+                .andExpect(jsonPath("$[0].candidateUserId").value(42L))
+                .andExpect(jsonPath("$[0].candidateDisplayName").value("Current User"))
+                .andExpect(jsonPath("$[0].otherParticipantUserId").value(11L))
+                .andExpect(jsonPath("$[0].otherParticipantDisplayName").value("Incoming Initiator"))
                 .andExpect(jsonPath("$[0].channelType").value("CHAT"))
                 .andExpect(jsonPath("$[0].status").value("PROPOSED"))
                 .andExpect(jsonPath("$[0].score").value(188))
@@ -102,8 +110,12 @@ public class MatchControllerTest {
         given(matchingFacade.getAcceptedMatches(42L))
                 .willReturn(List.of(new MatchInvitationView(
                         99L,
+                        42L,
+                        "Current User",
                         11L,
-                        "Accepted Initiator",
+                        "Accepted Candidate",
+                        11L,
+                        "Accepted Candidate",
                         ChannelType.CHAT,
                         "ACCEPTED",
                         188,
@@ -117,8 +129,12 @@ public class MatchControllerTest {
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(99L))
-                .andExpect(jsonPath("$[0].initiatorUserId").value(11L))
-                .andExpect(jsonPath("$[0].initiatorDisplayName").value("Accepted Initiator"))
+                .andExpect(jsonPath("$[0].initiatorUserId").value(42L))
+                .andExpect(jsonPath("$[0].initiatorDisplayName").value("Current User"))
+                .andExpect(jsonPath("$[0].candidateUserId").value(11L))
+                .andExpect(jsonPath("$[0].candidateDisplayName").value("Accepted Candidate"))
+                .andExpect(jsonPath("$[0].otherParticipantUserId").value(11L))
+                .andExpect(jsonPath("$[0].otherParticipantDisplayName").value("Accepted Candidate"))
                 .andExpect(jsonPath("$[0].channelType").value("CHAT"))
                 .andExpect(jsonPath("$[0].status").value("ACCEPTED"))
                 .andExpect(jsonPath("$[0].respondedAt").value("2026-03-30T09:30:00Z"));

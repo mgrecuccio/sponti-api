@@ -368,13 +368,17 @@ class MatchSuggestionsServiceTest {
 
         var incoming = service.getIncomingMatches(CANDIDATE_ID);
 
-        verify(userProfileQuery).getProfilesByIds(Set.of(USER_ID));
+        verify(userProfileQuery).getProfilesByIds(Set.of(USER_ID, CANDIDATE_ID));
         assertThat(incoming).hasSize(1);
         assertThat(incoming.getFirst())
                 .satisfies(match -> {
                     assertThat(match.id()).isEqualTo(10L);
                     assertThat(match.initiatorUserId()).isEqualTo(USER_ID);
                     assertThat(match.initiatorDisplayName()).isEqualTo("Initiator User");
+                    assertThat(match.candidateUserId()).isEqualTo(CANDIDATE_ID);
+                    assertThat(match.candidateDisplayName()).isEqualTo("Candidate User");
+                    assertThat(match.otherParticipantUserId()).isEqualTo(USER_ID);
+                    assertThat(match.otherParticipantDisplayName()).isEqualTo("Initiator User");
                     assertThat(match.channelType()).isEqualTo(ChannelType.CHAT);
                     assertThat(match.status()).isEqualTo(MatchProposalStatus.PROPOSED.name());
                     assertThat(match.score()).isEqualTo(90);
@@ -412,6 +416,15 @@ class MatchSuggestionsServiceTest {
         assertThat(accepted)
                 .extracting(MatchInvitationView::initiatorDisplayName)
                 .containsExactly("Initiator User", "Candidate User");
+        assertThat(accepted)
+                .extracting(MatchInvitationView::candidateDisplayName)
+                .containsExactly("Candidate User", "Initiator User");
+        assertThat(accepted)
+                .extracting(MatchInvitationView::otherParticipantUserId)
+                .containsExactly(CANDIDATE_ID, CANDIDATE_ID);
+        assertThat(accepted)
+                .extracting(MatchInvitationView::otherParticipantDisplayName)
+                .containsExactly("Candidate User", "Candidate User");
     }
 
     @Test
