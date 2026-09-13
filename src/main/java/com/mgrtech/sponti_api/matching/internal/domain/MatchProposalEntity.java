@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.matching.internal.domain;
 
 import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
+import com.mgrtech.sponti_api.matching.internal.exception.MatchNotCurrentlyActiveException;
 import com.mgrtech.sponti_api.matching.internal.exception.UserNotBelongsMatchException;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import jakarta.persistence.*;
@@ -128,8 +129,11 @@ public class MatchProposalEntity {
         }
     }
 
-    public void ensureContactable() {
+    public void ensureContactable(Instant now) {
         ensureAccepted();
+        if (overlapStart.isAfter(now) || !overlapEnd.isAfter(now)) {
+            throw new MatchNotCurrentlyActiveException("Match is not currently active.");
+        }
     }
 
     public void ensureNotExpired(Instant now) {

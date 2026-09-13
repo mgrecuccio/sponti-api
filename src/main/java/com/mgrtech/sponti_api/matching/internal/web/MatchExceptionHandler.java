@@ -73,6 +73,13 @@ public class MatchExceptionHandler {
         return problem(HttpStatus.CONFLICT, ApiErrorCode.MATCH_PROPOSAL_EXPIRED, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(MatchNotCurrentlyActiveException.class)
+    ProblemDetail handleMatchNotCurrentlyActive(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.CONFLICT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.CONFLICT, ApiErrorCode.MATCH_NOT_CURRENTLY_ACTIVE, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(AcceptedContactNotFoundException.class)
     ProblemDetail handleAcceptedContactNotFound(Exception ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",

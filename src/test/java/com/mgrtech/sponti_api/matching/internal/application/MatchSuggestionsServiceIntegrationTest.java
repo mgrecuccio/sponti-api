@@ -710,11 +710,38 @@ public class MatchSuggestionsServiceIntegrationTest {
         unrelatedAccepted.acceptBy(unrelatedCandidate.id());
         matchProposalRepository.saveAndFlush(unrelatedAccepted);
 
+        var futureAccepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                user.id(),
+                createUser("accepted-future-candidate", "Accepted Future Candidate").id(),
+                ChannelType.CHAT,
+                60,
+                Instant.parse("2026-03-30T10:00:00Z"),
+                Instant.parse("2026-03-30T11:00:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+        futureAccepted.acceptBy(futureAccepted.getCandidateUserId());
+        matchProposalRepository.saveAndFlush(futureAccepted);
+
+        var endedAccepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                user.id(),
+                createUser("accepted-ended-candidate", "Accepted Ended Candidate").id(),
+                ChannelType.CHAT,
+                60,
+                Instant.parse("2026-03-30T07:00:00Z"),
+                Instant.parse("2026-03-30T08:00:00Z"),
+                Instant.parse("2026-03-30T07:30:00Z")
+        ));
+        endedAccepted.acceptBy(endedAccepted.getCandidateUserId());
+        matchProposalRepository.saveAndFlush(endedAccepted);
+
         var matches = matchingFacade.getAcceptedMatches(user.id());
 
         assertThat(matches)
                 .extracting(MatchInvitationView::id)
                 .containsExactlyInAnyOrder(initiatedByUser.getId(), initiatedByOtherUser.getId());
+        assertThat(matches)
+                .extracting(MatchInvitationView::id)
+                .doesNotContain(futureAccepted.getId(), endedAccepted.getId());
         assertThat(matches)
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(initiatedByUser.getId());
