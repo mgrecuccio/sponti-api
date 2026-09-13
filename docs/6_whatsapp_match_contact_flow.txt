@@ -275,13 +275,13 @@ Recommended MVP expiration:
 Backend rules:
 - pending proposals cannot be accepted after expiresAt
 - expired proposals should not appear in active incoming proposals
-- contact-link endpoint must reject expired proposals unless status is already ACCEPTED and the product explicitly allows accepted matches to remain contactable
+- contact-link endpoint must reject non-accepted proposals and accepted matches outside their overlap window
 
 Recommended product decision:
 - expiration applies while the proposal is pending
-- once both users accept, the accepted match can remain contactable
+- once both users accept, the match remains contactable only during the accepted overlap window
 
-This avoids a poor user experience where users accept in time but later lose the chat action immediately.
+This keeps the accepted-match UI aligned with the period where both users are expected to be reachable.
 
 ------------------------------------------------------------------------
 

@@ -201,7 +201,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                 .orElseThrow(() -> new MatchNotFoundException("Match not found."));
 
         match.ensureParticipant(userId);
-        match.ensureContactable();
+        match.ensureContactable(Instant.now(clock));
         ensureAcceptedContactRelationship(match);
         ensureBothParticipantsHavePhoneNumbers(match);
 
@@ -248,28 +248,30 @@ public class MatchSuggestionsService implements MatchingFacade {
     @Transactional(readOnly = true)
     public List<MatchInvitationView> getAcceptedMatches(Long userId) {
         log.info("Accepted match invitations requested for userId={}", userId);
-        return getMatches(userId, MatchProposalStatus.ACCEPTED, true, false);
+        return getMatches(userId, MatchProposalStatus.ACCEPTED, true, false, true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<MatchInvitationView> getIncomingMatches(Long userId) {
         log.info("Incoming match invitations requested for userId={}", userId);
-        return getMatches(userId, MatchProposalStatus.PROPOSED, false, true);
+        return getMatches(userId, MatchProposalStatus.PROPOSED, false, true, false);
     }
 
     private List<MatchInvitationView> getMatches(
             Long userId,
             MatchProposalStatus status,
             boolean includeInitiated,
-            boolean requireUnexpired
+            boolean requireUnexpired,
+            boolean requireActiveOverlap
     ) {
         var proposals = repository.findVisibleByUserIdAndStatus(
                         userId,
                         status,
                         Instant.now(clock),
                         includeInitiated,
-                        requireUnexpired
+                        requireUnexpired,
+                        requireActiveOverlap
                 );
         var profilesById = userProfileQuery.getProfilesByIds(proposals.stream()
                 .flatMap(proposal -> Stream.of(

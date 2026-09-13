@@ -16,6 +16,7 @@ import com.mgrtech.sponti_api.matching.internal.exception.AcceptedContactNotFoun
 import com.mgrtech.sponti_api.matching.internal.exception.AvailabilityOverlapNotFoundException;
 import com.mgrtech.sponti_api.matching.internal.exception.ChannelNotAllowedException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchAlreadyExistsException;
+import com.mgrtech.sponti_api.matching.internal.exception.MatchNotCurrentlyActiveException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchNotFoundException;
 import com.mgrtech.sponti_api.matching.internal.exception.MatchProposalExpiredException;
 import com.mgrtech.sponti_api.matching.internal.exception.PhoneNumberRequiredException;
@@ -316,7 +317,7 @@ class MatchSuggestionsServiceTest {
     }
 
     @Test
-    void createContactLinkReturnsOtherUserWhatsAppUrlForAcceptedMatchAfterProposalExpiration() {
+    void createContactLinkReturnsOtherUserWhatsAppUrlForActiveAcceptedMatchAfterProposalExpiration() {
         var match = acceptedMatch(NOW.minus(Duration.ofMinutes(1)));
         when(repository.findById(10L)).thenReturn(Optional.of(match));
         when(contactQuery.findAcceptedContact(USER_ID, CANDIDATE_ID))
@@ -330,6 +331,34 @@ class MatchSuggestionsServiceTest {
         assertThat(contactLink.type()).isEqualTo(ContactLinkType.WHATSAPP);
         assertThat(contactLink.url()).isEqualTo("https://wa.me/32470123456");
         assertThat(contactLink.expiresAt()).isNull();
+    }
+
+    @Test
+    void createContactLinkThrowsWhenAcceptedMatchOverlapHasEnded() {
+        var match = acceptedMatch(
+                NOW.minus(Duration.ofDays(2)),
+                NOW.minus(Duration.ofDays(2)),
+                NOW.minus(Duration.ofDays(2)).plus(Duration.ofHours(1))
+        );
+        when(repository.findById(10L)).thenReturn(Optional.of(match));
+
+        assertThatThrownBy(() -> service.createContactLink(10L, USER_ID))
+                .isInstanceOf(MatchNotCurrentlyActiveException.class)
+                .hasMessage("Match is not currently active.");
+    }
+
+    @Test
+    void createContactLinkThrowsWhenAcceptedMatchOverlapHasNotStarted() {
+        var match = acceptedMatch(
+                NOW.plus(Duration.ofHours(2)),
+                NOW.plus(Duration.ofHours(1)),
+                NOW.plus(Duration.ofHours(2))
+        );
+        when(repository.findById(10L)).thenReturn(Optional.of(match));
+
+        assertThatThrownBy(() -> service.createContactLink(10L, USER_ID))
+                .isInstanceOf(MatchNotCurrentlyActiveException.class)
+                .hasMessage("Match is not currently active.");
     }
 
     @Test
@@ -369,7 +398,7 @@ class MatchSuggestionsServiceTest {
                 NOW.plus(Duration.ofMinutes(60)),
                 NOW.plus(Duration.ofMinutes(30))
         ));
-        when(repository.findVisibleByUserIdAndStatus(CANDIDATE_ID, MatchProposalStatus.PROPOSED, NOW, false, true))
+        when(repository.findVisibleByUserIdAndStatus(CANDIDATE_ID, MatchProposalStatus.PROPOSED, NOW, false, true, false))
                 .thenReturn(List.of(suggestion));
 
         var incoming = service.getIncomingMatches(CANDIDATE_ID);
@@ -407,7 +436,7 @@ class MatchSuggestionsServiceTest {
         ));
         initiatedByOtherUser.acceptBy(USER_ID);
         ReflectionTestUtils.setField(initiatedByOtherUser, "id", 11L);
-        when(repository.findVisibleByUserIdAndStatus(USER_ID, MatchProposalStatus.ACCEPTED, NOW, true, false))
+        when(repository.findVisibleByUserIdAndStatus(USER_ID, MatchProposalStatus.ACCEPTED, NOW, true, false, true))
                 .thenReturn(List.of(initiatedByUser, initiatedByOtherUser));
 
         var accepted = service.getAcceptedMatches(USER_ID);
@@ -643,13 +672,17 @@ class MatchSuggestionsServiceTest {
     }
 
     private MatchProposalEntity acceptedMatch(Instant expiresAt) {
+        return acceptedMatch(expiresAt, NOW, NOW.plus(Duration.ofMinutes(60)));
+    }
+
+    private MatchProposalEntity acceptedMatch(Instant expiresAt, Instant overlapStart, Instant overlapEnd) {
         var match = persistedSuggestion(new MatchProposalEntity(
                 USER_ID,
                 CANDIDATE_ID,
                 ChannelType.CHAT,
                 90,
-                NOW,
-                NOW.plus(Duration.ofMinutes(60)),
+                overlapStart,
+                overlapEnd,
                 expiresAt
         ));
         match.acceptBy(CANDIDATE_ID);
