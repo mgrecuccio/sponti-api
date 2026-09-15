@@ -71,7 +71,10 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
                     OR (proposal.initiatorUserId = :candidateUserId AND proposal.candidateUserId = :userId)
                   )
               AND (
-                    proposal.status = :acceptedStatus
+                    (
+                        proposal.status = :acceptedStatus
+                        AND proposal.overlapEnd > :now
+                    )
                     OR (
                         proposal.status = :proposedStatus
                         AND (proposal.expiresAt IS NULL OR proposal.expiresAt > :now)

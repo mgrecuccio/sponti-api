@@ -487,13 +487,13 @@ class MatchSuggestionsServiceTest {
 
         assertThatThrownBy(() -> service.createMatch(USER_ID, new CreateMatchCommand(CANDIDATE_ID, ChannelType.CHAT)))
                 .isInstanceOf(MatchAlreadyExistsException.class)
-                .hasMessage("An active or accepted match already exists for this pair.");
+                .hasMessage("An active proposal or accepted match already exists for this pair.");
 
         verifyNoInteractions(effectiveAvailabilityQuery);
     }
 
     @Test
-    void createMatchThrowsWhenReverseAcceptedProposalAlreadyExists() {
+    void createMatchThrowsWhenReverseBlockingProposalAlreadyExists() {
         when(contactQuery.findAcceptedContact(CANDIDATE_ID, USER_ID))
                 .thenReturn(Optional.of(new ContactView(USER_ID, "Marco", true, NOW.minus(Duration.ofDays(10)))));
         when(repository.existsBlockingProposalBetweenUsers(
@@ -506,7 +506,7 @@ class MatchSuggestionsServiceTest {
 
         assertThatThrownBy(() -> service.createMatch(CANDIDATE_ID, new CreateMatchCommand(USER_ID, ChannelType.CHAT)))
                 .isInstanceOf(MatchAlreadyExistsException.class)
-                .hasMessage("An active or accepted match already exists for this pair.");
+                .hasMessage("An active proposal or accepted match already exists for this pair.");
 
         verifyNoInteractions(effectiveAvailabilityQuery);
     }
