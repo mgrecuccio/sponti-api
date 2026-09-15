@@ -89,7 +89,7 @@ The important ownership rule is:
 
 The initiator must not accept or decline their own outgoing proposal.
 
-Match proposal uniqueness is pair-based, not direction-based. Once User A has an active or accepted proposal with User B, User B must not be allowed to create a second proposal back to User A.
+Match proposal uniqueness is pair-based, not direction-based. Once User A has an active proposal or currently valid accepted proposal with User B, User B must not be allowed to create a second proposal back to User A.
 
 ------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ The backend computes suggestions for the authenticated user by checking:
 - matching preferences
 - effective availability
 - channel compatibility
-- existing active or accepted proposals in either direction
+- existing active proposals or currently valid accepted proposals in either direction
 - recent matching history
 - score threshold
 
@@ -122,7 +122,7 @@ Request body:
 
 The backend recomputes the proposal from scratch:
 - checks that candidate is still an accepted contact
-- checks that no active proposal already exists for the pair in either direction
+- checks that no active proposal or currently valid accepted proposal already exists for the pair in either direction
 - checks that both users still have matching enabled
 - checks that selected channel is still allowed by both users
 - checks that both users still have valid effective availability overlap
@@ -463,7 +463,7 @@ Incoming matches should not return expired proposals.
 
 A future cleanup process can mark old PROPOSED rows as EXPIRED.
 
-Expired PROPOSED proposals do not block a future proposal for the same pair. ACCEPTED proposals do block future proposals for the same pair because the users are already matched.
+Expired PROPOSED proposals do not block a future proposal for the same pair. ACCEPTED proposals block future proposals for the same pair only while their overlap is still valid, because only one accepted match should be active for a pair at a time.
 
 ------------------------------------------------------------------------
 
@@ -477,7 +477,7 @@ Examples:
 - requested channel is not allowed by both users
 - no valid availability overlap exists
 - candidate score is below configured minimum
-- an active or accepted match already exists for the pair in either direction
+- an active proposal or currently valid accepted match already exists for the pair in either direction
 - match proposal does not belong to the authenticated candidate
 - proposal is no longer in PROPOSED status
 

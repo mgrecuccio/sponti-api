@@ -275,6 +275,62 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
+    void create_match_fails_when_accepted_match_overlap_is_still_active() {
+        var initiator = createUser("active-accepted-initiator", "Active Accepted Initiator");
+        var candidate = createUser("active-accepted-candidate", "Active Accepted Candidate");
+        createAcceptedContact(initiator.id(), candidate, false);
+        var accepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T09:00:00Z"),
+                Instant.parse("2026-03-30T10:00:00Z")
+        ));
+        accepted.acceptBy(candidate.id());
+        matchProposalRepository.saveAndFlush(accepted);
+
+        assertThatThrownBy(() -> matchingFacade.createMatch(
+                candidate.id(),
+                new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
+        )).isInstanceOf(MatchAlreadyExistsException.class)
+          .hasMessage("An active proposal or accepted match already exists for this pair.");
+
+        assertThat(matchProposalRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void create_match_succeeds_when_previous_accepted_match_overlap_has_ended() {
+        var initiator = createUser("ended-accepted-initiator", "Ended Accepted Initiator");
+        createChatAvailability(initiator.id(), LocalTime.of(10, 0));
+        var candidate = createUser("ended-accepted-candidate", "Ended Accepted Candidate");
+        createChatAvailability(candidate.id(), LocalTime.of(10, 0));
+        createAcceptedContact(initiator.id(), candidate, true);
+        var accepted = matchProposalRepository.saveAndFlush(new MatchProposalEntity(
+                initiator.id(),
+                candidate.id(),
+                ChannelType.CHAT,
+                100,
+                Instant.parse("2026-03-30T08:00:00Z"),
+                Instant.parse("2026-03-30T08:30:00Z")
+        ));
+        accepted.acceptBy(candidate.id());
+        matchProposalRepository.saveAndFlush(accepted);
+
+        var nextMatch = matchingFacade.createMatch(
+                candidate.id(),
+                new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
+        );
+
+        assertThat(nextMatch.status()).isEqualTo(MatchProposalStatus.PROPOSED.name());
+        assertThat(nextMatch.overlapStart()).isEqualTo(Instant.parse("2026-03-30T09:00:00Z"));
+        assertThat(nextMatch.overlapEnd()).isEqualTo(Instant.parse("2026-03-30T10:00:00Z"));
+        assertThat(matchProposalRepository.findAll())
+                .extracting(MatchProposalEntity::getStatus)
+                .containsExactlyInAnyOrder(MatchProposalStatus.ACCEPTED, MatchProposalStatus.PROPOSED);
+    }
+
+    @Test
     void create_match_expires_due_proposals_before_checking_duplicates() {
         var initiator = createUser("expired-retry-initiator", "Expired Retry Initiator");
         createChatAvailability(initiator.id(), LocalTime.of(10, 0));
@@ -588,7 +644,7 @@ public class MatchSuggestionsServiceIntegrationTest {
         assertThatThrownBy(() -> matchingFacade.createMatch(
                 candidate.id(), new CreateMatchCommand(initiator.id(), ChannelType.CHAT)
         )).isInstanceOf(MatchAlreadyExistsException.class)
-          .hasMessage("An active or accepted match already exists for this pair.");
+          .hasMessage("An active proposal or accepted match already exists for this pair.");
     }
 
     @Test

@@ -52,7 +52,7 @@ public class MatchSuggestionsService implements MatchingFacade {
 
     private static final int MAX_SUGGESTIONS = 3;
     private static final ZoneId FALLBACK_ZONE = ZoneId.of("UTC");
-    private static final String MATCH_ALREADY_EXISTS_MESSAGE = "An active or accepted match already exists for this pair.";
+    private static final String MATCH_ALREADY_EXISTS_MESSAGE = "An active proposal or accepted match already exists for this pair.";
     private static final PhoneNumberUtil PHONE_NUMBER_UTIL = PhoneNumberUtil.getInstance();
 
     private final Clock clock;
