@@ -104,7 +104,7 @@ class UserApplicationServiceIntegrationTest {
 
     @Test
     void create_user_persists_phone_number() {
-        final var phoneNumber = "+32987778844";
+        final var phoneNumber = "+32470123344";
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "test@email.com",
@@ -123,6 +123,23 @@ class UserApplicationServiceIntegrationTest {
 
         assertThat(userContactInfoQuery.hasPhoneNumber(created.id())).isTrue();
         assertThat(userContactInfoQuery.getPhoneNumber(created.id())).contains(phoneNumber);
+    }
+
+    @Test
+    void create_user_normalizes_phone_number_before_persisting() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "test@email.com",
+                        "password-hash",
+                        "nickname",
+                        " +32469887744 ",
+                        "UTC"
+                )
+        );
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.phoneNumber()).isEqualTo("+32469887744");
+        assertThat(userRepository.existsByPhoneNumber("+32469887744")).isTrue();
     }
 
     @Test
@@ -346,6 +363,29 @@ class UserApplicationServiceIntegrationTest {
 
         var privateProfile = userFacade.getCurrentUserProfile(created.id());
         assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void update_user_profile_normalizes_phone_number_before_persisting() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "john@example.com",
+                        "hash",
+                        "John",
+                        "UTC"
+                )
+        );
+
+        userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "new-display-name",
+                        "Europe/Brussels",
+                        " +32468009911 ")
+        );
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009911");
+        assertThat(userRepository.existsByPhoneNumber("+32468009911")).isTrue();
     }
 
     @Test

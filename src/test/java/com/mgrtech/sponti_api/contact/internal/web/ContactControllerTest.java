@@ -8,7 +8,7 @@ import com.mgrtech.sponti_api.contact.internal.application.command.SendContactIn
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
-import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.contact.internal.exception.ContactInviteeNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -84,11 +84,11 @@ class ContactControllerTest {
     @Test
     void send_invitation_and_returns_contact_invitation_view() throws Exception {
         var request = new ContactController.SendContactInvitationRequest(
-                "recipient@example.com",
+                "+32470123456",
                 "teamMate"
         );
 
-        given(contactFacade.sendInvitation(42L, new SendContactInvitationCommand(request.email(), request.nickName())))
+        given(contactFacade.sendInvitation(42L, new SendContactInvitationCommand(request.phoneNumber(), request.nickName())))
                 .willReturn(new ContactInvitationView(
                         33L,
                         42L,
@@ -112,23 +112,24 @@ class ContactControllerTest {
     @Test
     void send_invitation_returns_404_not_found_if_user_not_present() throws Exception {
         var request = new ContactController.SendContactInvitationRequest(
-                "recipient@example.com",
+                "+32470123456",
                 "teamMate"
         );
 
-        given(contactFacade.sendInvitation(42L, new SendContactInvitationCommand(request.email(), request.nickName())))
-                .willThrow(UserNotFoundException.class);
+        given(contactFacade.sendInvitation(42L, new SendContactInvitationCommand(request.phoneNumber(), request.nickName())))
+                .willThrow(ContactInviteeNotFoundException.class);
         mockMvc.perform(post("/api/v1/contacts/invitations")
                         .principal(new TestingAuthenticationToken("42", null))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CONTACT_INVITEE_NOT_FOUND"));
     }
 
     @Test
     void send_invitation_returns_400_if_request_not_valid() throws Exception {
         var request = new ContactController.SendContactInvitationRequest(
-                "wrong-email",
+                "wrong-phone-number",
                 "teamMate"
         );
 

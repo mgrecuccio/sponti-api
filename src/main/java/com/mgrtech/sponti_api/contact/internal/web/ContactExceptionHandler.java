@@ -37,6 +37,13 @@ public class ContactExceptionHandler {
         return problem(HttpStatus.CONFLICT, ApiErrorCode.CONTACT_INVITATION_ALREADY_EXISTS, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(ContactInviteeNotFoundException.class)
+    ProblemDetail handleInviteeNotFound(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.NOT_FOUND.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.NOT_FOUND, ApiErrorCode.CONTACT_INVITEE_NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(ContactAlreadyExistsException.class)
     ProblemDetail handleContactAlreadyExists(Exception ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",
