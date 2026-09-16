@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface UserLookupQuery {
 
-    Optional<UserLookupView> findByEmailForLookup(String email);
+    Optional<UserLookupView> findByPhoneNumberForLookup(String phoneNumber);
 }

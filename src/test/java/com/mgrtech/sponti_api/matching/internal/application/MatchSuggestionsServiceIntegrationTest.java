@@ -790,7 +790,7 @@ public class MatchSuggestionsServiceIntegrationTest {
     private void createAcceptedContact(Long initiatorId, CreatedUserView contact, boolean favorite) {
         var invitation = contactFacade.sendInvitation(
                 initiatorId,
-                new SendContactInvitationCommand(contact.email(), contact.displayName())
+                new SendContactInvitationCommand(contact.phoneNumber(), contact.displayName())
         );
         contactFacade.acceptInvitation(contact.id(), invitation.id());
 

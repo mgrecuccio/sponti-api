@@ -7,12 +7,12 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
+import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -50,7 +50,7 @@ class ContactController {
 
     @PostMapping("/invitations")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Send contact invitation", description = "Invite a user by email. Conflict responses use CONTACT_INVITATION_ALREADY_EXISTS, CONTACT_ALREADY_EXISTS, or CONTACT_BLOCKED.")
+    @Operation(summary = "Send contact invitation", description = "Invite an existing user by phone number. Not found responses use CONTACT_INVITEE_NOT_FOUND. Conflict responses use CONTACT_INVITATION_ALREADY_EXISTS, CONTACT_ALREADY_EXISTS, or CONTACT_BLOCKED.")
     public ContactInvitationView sendInvitation(
             Authentication authentication,
             @Valid @RequestBody SendContactInvitationRequest request
@@ -59,7 +59,7 @@ class ContactController {
 
         return contactFacade.sendInvitation(
                 senderUserId,
-                new SendContactInvitationCommand(request.email(), request.nickName())
+                new SendContactInvitationCommand(request.phoneNumber(), request.nickName())
         );
     }
 
@@ -163,10 +163,10 @@ class ContactController {
 
     @Schema(description = "Send Contact Invitation request payload")
     record SendContactInvitationRequest(
-            @Schema(example = "user@example.com")
+            @Schema(example = "+32470123456")
             @NotBlank
-            @Email
-            String email,
+            @ValidE164PhoneNumber
+            String phoneNumber,
 
             @Schema(example = "nickName")
             @Size(max = 100)

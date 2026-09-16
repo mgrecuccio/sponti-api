@@ -1,11 +1,10 @@
 package com.mgrtech.sponti_api.contact.internal.application;
 
-import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
+import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
-import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactInvitationEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.ContactRelationshipEntity;
 import com.mgrtech.sponti_api.contact.internal.domain.InvitationStatus;
@@ -13,12 +12,10 @@ import com.mgrtech.sponti_api.contact.internal.domain.RelationshipStatus;
 import com.mgrtech.sponti_api.contact.internal.exception.*;
 import com.mgrtech.sponti_api.contact.internal.repository.ContactInvitationRepository;
 import com.mgrtech.sponti_api.contact.internal.repository.ContactRelationshipRepository;
-import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.user.api.query.UserLookupQuery;
 import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import lombok.AllArgsConstructor;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 
 @Service
 @Transactional
@@ -50,13 +47,12 @@ class ContactApplicationService implements ContactFacade {
     public ContactInvitationView sendInvitation(Long senderUserId, SendContactInvitationCommand command) {
         log.info("Send contact invitation requested: senderUserId={}", senderUserId);
         var now = Instant.now(clock);
+        var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
 
-        var recipient = userLookupQuery.findByEmailForLookup(normalizeEmail(command.email()))
+        var recipient = userLookupQuery.findByPhoneNumberForLookup(phoneNumber)
                 .orElseThrow(() -> {
                     log.warn("Send invitation failed: recipient not found for senderUserId={}", senderUserId);
-                    return new UserNotFoundException(
-                            "No account exists for that email address yet. You can invite only existing users."
-                    );
+                    return new ContactInviteeNotFoundException();
                 });
 
         var recipientUserId = recipient.id();
@@ -319,7 +315,7 @@ class ContactApplicationService implements ContactFacade {
 
     private ContactView toContactView(ContactRelationshipEntity relationship) {
         var displayName = userProfileQuery.getProfileById(relationship.getContactUserId())
-                .map(profile -> profile.displayName())
+                .map(UserProfileView::displayName)
                 .orElse(null);
 
         return new ContactView(

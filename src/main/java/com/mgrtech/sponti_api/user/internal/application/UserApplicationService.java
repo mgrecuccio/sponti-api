@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.toProfileView;
 import static com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity.toMatchingPreferencesView;
@@ -86,8 +87,8 @@ public class UserApplicationService implements
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<UserLookupView> findByEmailForLookup(String email) {
-        return userRepository.findByEmail(email)
+    public Optional<UserLookupView> findByPhoneNumberForLookup(String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber)
                 .map(UserEntity::toLookupView);
     }
 
@@ -124,7 +125,7 @@ public class UserApplicationService implements
     public CreatedUserView createUser(CreateUserCommand command) {
         log.info("Registering user: email={}", command.email());
         var normalizedEmail = normalizeEmail(command.email());
-        var phoneNumber = blankToNull(command.phoneNumber());
+        var phoneNumber = normalizedPhoneNumberOrNull(command.phoneNumber());
 
         if(userRepository.existsByEmail(normalizedEmail)) {
             log.warn("Registration blocked: email={} already exists", command.email());
@@ -151,6 +152,7 @@ public class UserApplicationService implements
         return new CreatedUserView(
                 persistedUser.getId(),
                 persistedUser.getEmail(),
+                persistedUser.getPhoneNumber(),
                 persistedUser.getDisplayName(),
                 persistedUser.getStatusAsString()
         );
@@ -160,7 +162,7 @@ public class UserApplicationService implements
     @Transactional
     public UserProfileView updateProfile(Long userId, UpdateUserCommand command) {
         log.info("Updating userId={}", userId);
-        var phoneNumber = blankToNull(command.phoneNumber());
+        var phoneNumber = normalizedPhoneNumberOrNull(command.phoneNumber());
 
         var user = userRepository.findById(userId)
                         .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
@@ -206,5 +208,10 @@ public class UserApplicationService implements
         log.info("Preferences updated for userId={}: allowChat={}, allowCall={}, quietHoursStart={}, quietHoursEnd={}, pushNotificationsEnabled={}, suggestionNotificationsEnabled={}",
                 userId, preferences.isAllowChat(), preferences.isAllowCall(), preferences.getQuietHoursStart(), preferences.getQuietHoursEnd(), preferences.isPushNotificationsEnabled(), preferences.isSuggestionNotificationsEnabled());
         return toMatchingPreferencesView(user, preferences);
+    }
+
+    private String normalizedPhoneNumberOrNull(String phoneNumber) {
+        var value = blankToNull(phoneNumber);
+        return value == null ? null : normalizeE164PhoneNumber(value);
     }
 }
