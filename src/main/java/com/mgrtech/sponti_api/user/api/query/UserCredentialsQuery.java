@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public interface UserCredentialsQuery {
 
-    Optional<UserCredentialsView> findByEmail(String email);
+    Optional<UserCredentialsView> findByPhoneNumber(String phoneNumber);
 
     Optional<UserCredentialsView> findById(Long id);
 }

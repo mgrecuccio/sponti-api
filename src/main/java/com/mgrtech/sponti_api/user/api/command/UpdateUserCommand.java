@@ -5,10 +5,4 @@ public record UpdateUserCommand(
         String timezone,
         String phoneNumber
 ) {
-    public UpdateUserCommand(
-            String displayName,
-            String timezone
-    ) {
-        this(displayName, timezone, null);
-    }
 }

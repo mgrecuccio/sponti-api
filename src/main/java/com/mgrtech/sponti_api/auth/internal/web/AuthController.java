@@ -49,7 +49,7 @@ class AuthController {
     @SecurityRequirements
     @Operation(summary = "Authenticate user and return tokens")
     AuthTokens login(@Valid @RequestBody LoginRequest request) {
-        return authFacade.login(new LoginCommand(request.email(), request.password()));
+        return authFacade.login(new LoginCommand(request.phoneNumber(), request.password()));
     }
 
     @PostMapping("/refresh")
@@ -82,14 +82,14 @@ class AuthController {
             @Schema(example = "user@example.com") @NotBlank @Email String email,
             @Schema(example = "strongPassword") @NotBlank String password,
             @Schema(example = "nickname") @NotBlank String displayName,
-            @Schema(example = "+32468009911") @ValidE164PhoneNumber String phoneNumber,
+            @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber,
             @Schema(example = "Europe/Brussels")String timezone
     ) {
     }
 
     @Schema(description = "Login request payload")
     record LoginRequest(
-            @Schema(example = "user@example.com") @NotBlank @Email String email,
+            @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber,
             @Schema(example = "strongPassword") @NotBlank String password) {
     }
 

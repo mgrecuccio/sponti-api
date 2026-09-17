@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
@@ -53,8 +52,8 @@ public class UserApplicationService implements
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<UserCredentialsView> findByEmail(String email) {
-        return userRepository.findByEmail(normalizeEmail(email))
+    public Optional<UserCredentialsView> findByPhoneNumber(String phoneNumber) {
+        return userRepository.findByPhoneNumber(normalizeE164PhoneNumber(phoneNumber))
                 .map(UserEntity::toCredentialsView);
     }
 
@@ -125,14 +124,14 @@ public class UserApplicationService implements
     public CreatedUserView createUser(CreateUserCommand command) {
         log.info("Registering user: email={}", command.email());
         var normalizedEmail = normalizeEmail(command.email());
-        var phoneNumber = normalizedPhoneNumberOrNull(command.phoneNumber());
+        var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
 
         if(userRepository.existsByEmail(normalizedEmail)) {
             log.warn("Registration blocked: email={} already exists", command.email());
             throw new EmailAlreadyUsedException("Email already used");
         }
 
-        if(phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)) {
+        if(userRepository.existsByPhoneNumber(phoneNumber)) {
             log.warn("Registration blocked: phoneNumber={} already exists", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
@@ -162,12 +161,12 @@ public class UserApplicationService implements
     @Transactional
     public UserProfileView updateProfile(Long userId, UpdateUserCommand command) {
         log.info("Updating userId={}", userId);
-        var phoneNumber = normalizedPhoneNumberOrNull(command.phoneNumber());
+        var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
 
         var user = userRepository.findById(userId)
                         .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
 
-        if(phoneNumber != null && userRepository.existsByPhoneNumberAndIdNot(phoneNumber, userId)) {
+        if(userRepository.existsByPhoneNumberAndIdNot(phoneNumber, userId)) {
             log.warn("Profile update blocked: phoneNumber={} already exists for another user", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
@@ -210,8 +209,4 @@ public class UserApplicationService implements
         return toMatchingPreferencesView(user, preferences);
     }
 
-    private String normalizedPhoneNumberOrNull(String phoneNumber) {
-        var value = blankToNull(phoneNumber);
-        return value == null ? null : normalizeE164PhoneNumber(value);
-    }
 }
