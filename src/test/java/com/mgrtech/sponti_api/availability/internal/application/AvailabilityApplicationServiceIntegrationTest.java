@@ -35,9 +35,12 @@ class AvailabilityApplicationServiceIntegrationTest {
     @Autowired
     DatabaseCleaner databaseCleaner;
 
+    private int phoneNumberSequence;
+
     @BeforeEach
     void cleanDatabase() {
         databaseCleaner.clean();
+        phoneNumberSequence = 1;
     }
 
     @Test
@@ -250,8 +253,13 @@ class AvailabilityApplicationServiceIntegrationTest {
                         email,
                         "password-hash",
                         email.substring(0, email.indexOf('@')),
+                        nextPhoneNumber(),
                         timezone
                 )
         );
+    }
+
+    private String nextPhoneNumber() {
+        return "+32468" + String.format("%06d", phoneNumberSequence++);
     }
 }

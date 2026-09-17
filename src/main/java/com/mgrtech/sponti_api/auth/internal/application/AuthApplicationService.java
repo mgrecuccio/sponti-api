@@ -20,8 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 
 @Service
 @Transactional
@@ -68,7 +68,7 @@ class AuthApplicationService implements AuthFacade {
                         normalizedEmail,
                         passwordHash,
                         command.displayName(),
-                        blankToNull(command.phoneNumber()),
+                        normalizeE164PhoneNumber(command.phoneNumber()),
                         command.timezone()
                 )
         );
@@ -92,20 +92,20 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens login(LoginCommand command) {
-        log.info("Login requested: email={}", maskEmail(command.email()));
+        log.info("Login requested: phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
 
-        var normalizedEmail = normalizeEmail(command.email());
+        var normalizedPhoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
 
-        var user = userCredentialsQuery.findByEmail(normalizedEmail)
+        var user = userCredentialsQuery.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> {
-                    metrics.authFailure("unknown_email");
-                    log.warn("Login rejected: unknown email={}", maskEmail(command.email()));
+                    metrics.authFailure("unknown_phone_number");
+                    log.warn("Login rejected: unknown phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
                     return new BadCredentialsException("Bad Credentials");
                 });
 
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
             metrics.authFailure("bad_password");
-            log.warn("Login rejected: bad credentials for email={}", maskEmail(command.email()));
+            log.warn("Login rejected: bad credentials for phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
             throw new BadCredentialsException("Bad credentials");
         }
 
@@ -171,5 +171,18 @@ class AuthApplicationService implements AuthFacade {
         }
 
         return email.charAt(0) + "***" + email.substring(atIndex);
+    }
+
+    private String maskPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return "na";
+        }
+
+        var trimmed = phoneNumber.trim();
+        if (trimmed.length() <= 4) {
+            return "***";
+        }
+
+        return "***" + trimmed.substring(trimmed.length() - 4);
     }
 }

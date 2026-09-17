@@ -71,6 +71,7 @@ class UserApplicationServiceIntegrationTest {
                         "test@email.com",
                         "password-hash",
                         "nickname",
+                        "+32468009910",
                         "UTC"
                 )
         );
@@ -145,10 +146,10 @@ class UserApplicationServiceIntegrationTest {
     @Test
     void get_profiles_by_ids_returns_profiles_keyed_by_user_id() {
         var first = userRegistrationFacade.createUser(
-                new CreateUserCommand("first@email.com", "password-hash", "First User", "UTC")
+                new CreateUserCommand("first@email.com", "password-hash", "First User", "+32468009911", "UTC")
         );
         var second = userRegistrationFacade.createUser(
-                new CreateUserCommand("second@email.com", "password-hash", "Second User", "UTC")
+                new CreateUserCommand("second@email.com", "password-hash", "Second User", "+32468009912", "UTC")
         );
 
         var profiles = userProfileQuery.getProfilesByIds(List.of(first.id(), second.id(), 999L, first.id()));
@@ -159,8 +160,8 @@ class UserApplicationServiceIntegrationTest {
     }
 
     @Test
-    void create_user_persists_when_phone_number_null() {
-        var result = userRegistrationFacade.createUser(
+    void create_user_rejects_when_phone_number_null() {
+        assertThatThrownBy(() -> userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "test@email.com",
                         "password-hash",
@@ -168,20 +169,12 @@ class UserApplicationServiceIntegrationTest {
                         null,
                         "UTC"
                 )
-        );
-
-
-        var user = userRepository.findById(result.id());
-        assertThat(user).isPresent();
-        assertThat(user.get().getEmail()).isEqualTo("test@email.com");
-        assertThat(user.get().getPhoneNumber()).isNull();
-        assertThat(userContactInfoQuery.hasPhoneNumber(result.id())).isFalse();
-        assertThat(userContactInfoQuery.getPhoneNumber(result.id())).isEmpty();
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void create_user_persists_when_empty_phone_number_is_normalized() {
-        var result = userRegistrationFacade.createUser(
+    void create_user_rejects_when_phone_number_is_empty() {
+        assertThatThrownBy(() -> userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "test@email.com",
                         "password-hash",
@@ -189,46 +182,7 @@ class UserApplicationServiceIntegrationTest {
                         "",
                         "UTC"
                 )
-        );
-
-        var user = userRepository.findById(result.id());
-        assertThat(user).isPresent();
-        assertThat(user.get().getEmail()).isEqualTo("test@email.com");
-        assertThat(user.get().getPhoneNumber()).isNull();
-    }
-
-    @Test
-    void create_user_persists_multiple_users_with_null_phone_number() {
-        var result1 = userRegistrationFacade.createUser(
-                new CreateUserCommand(
-                        "user1@email.com",
-                        "password-hash",
-                        "nickname",
-                        "",
-                        "UTC"
-                )
-        );
-
-        var result2 = userRegistrationFacade.createUser(
-                new CreateUserCommand(
-                        "user2@email.com",
-                        "password-hash",
-                        "nickname",
-                        null,
-                        "UTC"
-                )
-        );
-
-        var user1 = userRepository.findById(result1.id());
-
-        assertThat(user1).isPresent();
-        assertThat(user1.get().getEmail()).isEqualTo("user1@email.com");
-        assertThat(user1.get().getPhoneNumber()).isNull();
-
-        var user2 = userRepository.findById(result2.id());
-        assertThat(user2).isPresent();
-        assertThat(user2.get().getEmail()).isEqualTo("user2@email.com");
-        assertThat(user2.get().getPhoneNumber()).isNull();
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -255,27 +209,29 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash1",
                         "John",
+                        "+32468009913",
                         "UTC"
                 )
         );
 
         assertThatThrownBy(() -> userRegistrationFacade.createUser(
-                new CreateUserCommand(" John@Example.com ", "hash2", "Johnny", "UTC")
+                new CreateUserCommand(" John@Example.com ", "hash2", "Johnny", "+32468009914", "UTC")
         )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test
-    void find_by_email_normalizes_input() {
+    void find_by_phone_number_normalizes_input() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009911",
                         "UTC"
                 )
         );
 
-        var result = userCredentialsQuery.findByEmail("  JOHN@EXAMPLE.COM ");
+        var result = userCredentialsQuery.findByPhoneNumber("  +32468009911 ");
 
         assertThat(result).isPresent();
         assertThat(result.get().id()).isEqualTo(created.id());
@@ -288,6 +244,7 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009915",
                         "UTC"
                 )
         );
@@ -312,12 +269,13 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009916",
                         "UTC"
                 )
         );
 
         userFacade.updateProfile(created.id(),
-                new UpdateUserCommand("new-display-name", "Europe/Brussels"));
+                new UpdateUserCommand("new-display-name", "Europe/Brussels", "+32468009916"));
 
         var updated = userProfileQuery.getProfileById(created.id());
 
@@ -333,6 +291,7 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009917",
                         "UTC"
                 )
         );
@@ -341,7 +300,7 @@ class UserApplicationServiceIntegrationTest {
 
         var persistedUser = userRepository.findById(userId);
         assertThat(persistedUser.isPresent()).isTrue();
-        assertThat(persistedUser.get().getPhoneNumber()).isNull();
+        assertThat(persistedUser.get().getPhoneNumber()).isEqualTo("+32468009917");
 
         userFacade.updateProfile(created.id(),
                 new UpdateUserCommand(
@@ -372,6 +331,7 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009918",
                         "UTC"
                 )
         );
@@ -414,7 +374,7 @@ class UserApplicationServiceIntegrationTest {
     }
 
     @Test
-    void update_user_profile_normalizes_empty_phone_number_to_null() {
+    void update_user_profile_rejects_empty_phone_number() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
                         "john@example.com",
@@ -425,15 +385,12 @@ class UserApplicationServiceIntegrationTest {
                 )
         );
 
-        userFacade.updateProfile(created.id(),
+        assertThatThrownBy(() -> userFacade.updateProfile(created.id(),
                 new UpdateUserCommand(
                         "John Updated",
                         "Europe/Brussels",
                         "")
-        );
-
-        var privateProfile = userFacade.getCurrentUserProfile(created.id());
-        assertThat(privateProfile.phoneNumber()).isNull();
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -460,6 +417,7 @@ class UserApplicationServiceIntegrationTest {
                         "user2@example.com",
                         "hash",
                         "John",
+                        "+32468009919",
                         "UTC"
                 )
         );
@@ -475,7 +433,7 @@ class UserApplicationServiceIntegrationTest {
     @Test
     void update_user_profile_fails_if_user_not_found() {
         assertThatThrownBy(() -> userFacade.updateProfile(11L,
-                new UpdateUserCommand("new-display-name", "Europe/Brussels")))
+                new UpdateUserCommand("new-display-name", "Europe/Brussels", "+32468009911")))
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("Impossible to update the profile: user not found.");
     }
@@ -487,6 +445,7 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009920",
                         "UTC"
                 )
         );
@@ -544,6 +503,7 @@ class UserApplicationServiceIntegrationTest {
                         "john@example.com",
                         "hash",
                         "John",
+                        "+32468009921",
                         "UTC"
                 )
         );

@@ -54,7 +54,7 @@ class AuthApplicationServiceIntegrationTest {
         );
 
         assertThatThrownBy(() -> authFacade.register(
-                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "", "UTC")
+                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "+32468009912", "UTC")
         )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
@@ -65,7 +65,7 @@ class AuthApplicationServiceIntegrationTest {
         );
 
         var result = authFacade.login(
-                new LoginCommand("john@example.com", "password")
+                new LoginCommand("+32468009911", "password")
         );
 
         assertThat(result).isNotNull();
@@ -76,13 +76,13 @@ class AuthApplicationServiceIntegrationTest {
     }
 
     @Test
-    void login_normalizes_email() {
+    void login_normalizes_phone_number() {
         authFacade.register(
                 getRegistrationCommand()
         );
 
         var result = authFacade.login(
-                new LoginCommand("  JOHN@EXAMPLE.COM  ", "password")
+                new LoginCommand("  +32468009911  ", "password")
         );
 
         assertThat(result).isNotNull();
@@ -93,7 +93,7 @@ class AuthApplicationServiceIntegrationTest {
     @Test
     void login_throws_bad_credentials_when_user_does_not_exist() {
         assertThatThrownBy(() -> authFacade.login(
-                new LoginCommand("missing@example.com", "password")
+                new LoginCommand("+32468009912", "password")
         )).isInstanceOf(BadCredentialsException.class);
     }
 
@@ -104,7 +104,7 @@ class AuthApplicationServiceIntegrationTest {
         );
 
         assertThatThrownBy(() -> authFacade.login(
-                new LoginCommand("john@example.com", "wrong-password")
+                new LoginCommand("+32468009911", "wrong-password")
         )).isInstanceOf(BadCredentialsException.class);
     }
 
@@ -131,7 +131,7 @@ class AuthApplicationServiceIntegrationTest {
                 getRegistrationCommand()
         );
         var loggedIn = authFacade.login(
-                new LoginCommand("john@example.com", "password")
+                new LoginCommand("+32468009911", "password")
         );
         var userId = jwtTokenService.extractUserId(registered.accessToken());
 
@@ -144,6 +144,6 @@ class AuthApplicationServiceIntegrationTest {
     }
 
     private static @NonNull RegisterCommand getRegistrationCommand() {
-        return new RegisterCommand("john@example.com", "password", "John", "", "UTC");
+        return new RegisterCommand("john@example.com", "password", "John", "+32468009911", "UTC");
     }
 }

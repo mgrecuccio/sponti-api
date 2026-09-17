@@ -103,7 +103,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void registers_user_and_returns_auth_tokens_when_phone_number_is_missing() throws Exception {
+    void register_returns_bad_request_when_phone_number_is_missing() throws Exception {
         var request = new AuthController.RegisterRequest(
                 "john@example.com",
                 "password",
@@ -130,8 +130,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").value("access-token"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
@@ -169,11 +169,11 @@ class AuthControllerTest {
     @Test
     void logins_and_returns_auth_tokens() throws Exception {
         var request = new AuthController.LoginRequest(
-                "john@example.com",
+                "+32468009911",
                 "password"
         );
 
-        given(authFacade.login(new LoginCommand(request.email(), request.password())))
+        given(authFacade.login(new LoginCommand(request.phoneNumber(), request.password())))
                 .willReturn(new AuthTokens(
                         "access-token",
                         "refresh-token",
@@ -191,11 +191,11 @@ class AuthControllerTest {
     @Test
     void login_returns_bad_request_if_request_is_invalid() throws Exception {
         var request = new AuthController.LoginRequest(
-                "invalid-email",
+                "+3246",
                 "password"
         );
 
-        given(authFacade.login(new LoginCommand(request.email(), request.password())))
+        given(authFacade.login(new LoginCommand(request.phoneNumber(), request.password())))
                 .willReturn(new AuthTokens(
                         "access-token",
                         "refresh-token",
@@ -212,11 +212,11 @@ class AuthControllerTest {
     @Test
     void login_returns_unauthorized_if_user_not_found() throws Exception {
         var request = new AuthController.LoginRequest(
-                "john@example.com",
+                "+32468009911",
                 "password"
         );
 
-        given(authFacade.login(new LoginCommand(request.email(), request.password())))
+        given(authFacade.login(new LoginCommand(request.phoneNumber(), request.password())))
                 .willThrow(BadCredentialsException.class);
 
         mockMvc.perform(post("/api/v1/auth/login")

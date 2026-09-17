@@ -24,8 +24,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalTime;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.blankToNull;
-
 @RestController
 @RequestMapping("/api/v1/users")
 @SecurityRequirement(name = "bearerAuth")
@@ -47,7 +45,7 @@ public class UserController {
         return userFacade.updateProfile(userId, new UpdateUserCommand(
                     request.displayName,
                     request.timezone,
-                    blankToNull(request.phoneNumber)
+                    request.phoneNumber
                 )
         );
     }
@@ -97,7 +95,7 @@ public class UserController {
     record UpdateProfileRequest(
             @Schema(example = "New display name") @NotBlank String displayName,
             @Schema(example = "Europe/Brussels") @NotBlank String timezone,
-            @Schema(example = "+32468009911") @ValidE164PhoneNumber String phoneNumber
+            @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber
     ) {
     }
 

@@ -22,7 +22,7 @@ public class UserEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone_number", unique = true, length = 16)
+    @Column(name = "phone_number", nullable = false, unique = true, length = 16)
     private String phoneNumber;
 
     @Column(name = "phone_number_verified", nullable = false)
