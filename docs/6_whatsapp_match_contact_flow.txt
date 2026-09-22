@@ -180,20 +180,18 @@ Do not expose the raw phone number in normal profile, contact, or match APIs unl
 
 6. Registration Flow Changes
 
-Phone number should be supported during registration but should not necessarily be mandatory at account creation.
+Phone number is used during registration and is mandatory at account creation.
 
 Recommended MVP behavior:
-- phone number is optional during registration
-- users who already want to complete setup can add it immediately
-- phone number becomes mandatory before accepting a match proposal
+- phone number is required during registration
+- phone number is available before accepting a match proposal
 - phone number should eventually be verified before exposing WhatsApp contact actions
 
 Registration request change:
 
-Add an optional field to the registration request:
+Registration request:
 
 {
-  "email": "user@example.com",
   "password": "secret",
   "displayName": "Marco",
   "phoneNumber": "+32470123456"

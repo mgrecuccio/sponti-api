@@ -45,7 +45,7 @@ class AvailabilityApplicationServiceIntegrationTest {
 
     @Test
     void create_update_and_delete_rule_persists_changes_for_user() {
-        var user = createUser("owner@example.com", "Europe/Brussels");
+        var user = createUser("owner", "Europe/Brussels");
 
         var created = availabilityFacade.createRule(
                 user.id(),
@@ -100,8 +100,8 @@ class AvailabilityApplicationServiceIntegrationTest {
 
     @Test
     void update_and_delete_rule_are_scoped_to_owner() {
-        var owner = createUser("owner@example.com", "UTC");
-        var otherUser = createUser("other@example.com", "UTC");
+        var owner = createUser("owner", "UTC");
+        var otherUser = createUser("other", "UTC");
 
         var rule = availabilityFacade.createRule(
                 owner.id(),
@@ -133,8 +133,8 @@ class AvailabilityApplicationServiceIntegrationTest {
 
     @Test
     void get_rules_returns_only_requested_user_ordered_by_day_and_start_time() {
-        var user = createUser("owner@example.com", "UTC");
-        var otherUser = createUser("other@example.com", "UTC");
+        var user = createUser("owner", "UTC");
+        var otherUser = createUser("other", "UTC");
 
         availabilityFacade.createRule(
                 user.id(),
@@ -164,8 +164,8 @@ class AvailabilityApplicationServiceIntegrationTest {
 
     @Test
     void create_and_query_overrides_persists_and_filters_by_end_time() {
-        var user = createUser("owner@example.com", "UTC");
-        var otherUser = createUser("other@example.com", "UTC");
+        var user = createUser("owner", "UTC");
+        var otherUser = createUser("other", "UTC");
 
         availabilityFacade.createOverride(
                 user.id(),
@@ -210,7 +210,7 @@ class AvailabilityApplicationServiceIntegrationTest {
 
     @Test
     void effective_availability_uses_persisted_rules_overrides_and_user_timezone() {
-        var user = createUser("owner@example.com", "Europe/Brussels");
+        var user = createUser("owner", "Europe/Brussels");
 
         availabilityFacade.createRule(
                 user.id(),
@@ -247,12 +247,11 @@ class AvailabilityApplicationServiceIntegrationTest {
                 });
     }
 
-    private com.mgrtech.sponti_api.user.api.view.CreatedUserView createUser(String email, String timezone) {
+    private com.mgrtech.sponti_api.user.api.view.CreatedUserView createUser(String displayName, String timezone) {
         return userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        email,
                         "password-hash",
-                        email.substring(0, email.indexOf('@')),
+                        displayName,
                         nextPhoneNumber(),
                         timezone
                 )

@@ -1,7 +1,6 @@
 create table if not exists users (
     id bigserial primary key,
-    email varchar(255) not null unique,
-    phone_number varchar(255) unique,
+    phone_number varchar(16) not null unique,
     phone_number_verified boolean not null default false,
     whats_app_opt_in boolean not null default false,
     phone_number_verified_at timestamp with time zone,

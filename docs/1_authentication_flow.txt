@@ -32,7 +32,7 @@ Characteristics
 -   Signed using HMAC secret
 -   Contains minimal claims:
     -   sub → userId
-    -   email
+    -   phoneNumber
     -   roles
 
 Why minimal claims?
@@ -86,9 +86,9 @@ Strategy
 
 Registration Flow
 
-1.  Client sends email + password + displayName
+1.  Client sends phoneNumber + password + displayName
 2.  Auth module:
-    -   Normalizes email
+    -   Normalizes phoneNumber to E.164
     -   Hashes password
     -   Sends CreateUserCommand to user module
 3.  User module persists user
@@ -96,7 +96,7 @@ Registration Flow
 
 Login Flow
 
-1.  Client sends credentials
+1.  Client sends phoneNumber + password
 2.  Auth retrieves user via UserCredentialsQuery
 3.  Password verified
 4.  Tokens issued

@@ -19,13 +19,6 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(EmailAlreadyUsedException.class)
-    ProblemDetail handleEmailAlreadyUsed(EmailAlreadyUsedException ex, HttpServletRequest request) {
-        log.warn("Request failed: status={} method={} path={} error={}",
-                HttpStatus.CONFLICT.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
-        return problem(HttpStatus.CONFLICT, ApiErrorCode.EMAIL_ALREADY_USED, ex.getMessage(), request.getRequestURI());
-    }
-
     @ExceptionHandler(PhoneNumberAlreadyUsedException.class)
     ProblemDetail handlePhoneNumberAlreadyUsed(PhoneNumberAlreadyUsedException ex, HttpServletRequest request) {
         log.warn("Request failed: status={} method={} path={} error={}",

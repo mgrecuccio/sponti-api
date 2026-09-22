@@ -41,7 +41,6 @@ class AuthControllerTest {
     @Test
     void registers_user_and_returns_auth_tokens() throws Exception {
         var request = new AuthController.RegisterRequest(
-                "john@example.com",
                 "password",
                 "nickname",
                 "+32468009911",
@@ -50,7 +49,6 @@ class AuthControllerTest {
 
         given(authFacade.register(
                 new RegisterCommand(
-                        request.email(),
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
@@ -71,10 +69,9 @@ class AuthControllerTest {
     }
 
     @Test
-    void register_returns_bad_request_if_request_is_invalid() throws Exception {
+    void register_returns_bad_request_if_password_is_missing() throws Exception {
         var request = new AuthController.RegisterRequest(
-                "invalid-email",
-                "password",
+                "",
                 "nickname",
                 "+32468009911",
                 "UTC"
@@ -82,7 +79,6 @@ class AuthControllerTest {
 
         given(authFacade.register(
                 new RegisterCommand(
-                        request.email(),
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
@@ -105,7 +101,6 @@ class AuthControllerTest {
     @Test
     void register_returns_bad_request_when_phone_number_is_missing() throws Exception {
         var request = new AuthController.RegisterRequest(
-                "john@example.com",
                 "password",
                 "nickname",
                 "",
@@ -114,7 +109,6 @@ class AuthControllerTest {
 
         given(authFacade.register(
                 new RegisterCommand(
-                        request.email(),
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
@@ -137,7 +131,6 @@ class AuthControllerTest {
     @Test
     void register_returns_bad_request_if_phone_number_is_invalid() throws Exception {
         var request = new AuthController.RegisterRequest(
-                "invalid-email",
                 "password",
                 "nickname",
                 "+3246",
@@ -146,7 +139,6 @@ class AuthControllerTest {
 
         given(authFacade.register(
                 new RegisterCommand(
-                        request.email(),
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),

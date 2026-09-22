@@ -1,4 +1,4 @@
-create unique index if not exists idx_users_email on users(email);
+create unique index if not exists idx_users_phone_number on users(phone_number);
 
 create table if not exists refresh_tokens (
     id bigserial primary key,

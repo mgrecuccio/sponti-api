@@ -26,7 +26,7 @@ public class JwtTokenService {
         this.secretKey = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String issueAccessToken(Long userId, String email, Collection<String> roles) {
+    public String issueAccessToken(Long userId, String phoneNumber, Collection<String> roles) {
         var now = Instant.now();
         var expiresAt = now.plus(properties.accessTokenMinutes(), ChronoUnit.MINUTES);
 
@@ -36,7 +36,7 @@ public class JwtTokenService {
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))
                 .id(UUID.randomUUID().toString())
-                .claim("email", email)
+                .claim("phoneNumber", phoneNumber)
                 .claim("roles", List.copyOf(roles))
                 .claim("typ", "access")
                 .signWith(secretKey())

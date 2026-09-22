@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -36,7 +35,6 @@ class AuthController {
     AuthTokens register(@Valid @RequestBody RegisterRequest request) {
         return authFacade.register(
                 new RegisterCommand(
-                        request.email(),
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
@@ -79,7 +77,6 @@ class AuthController {
 
     @Schema(description = "Register request payload")
     record RegisterRequest(
-            @Schema(example = "user@example.com") @NotBlank @Email String email,
             @Schema(example = "strongPassword") @NotBlank String password,
             @Schema(example = "nickname") @NotBlank String displayName,
             @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber,

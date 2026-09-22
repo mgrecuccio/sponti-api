@@ -10,8 +10,8 @@ public record PendingContactInvitationView(
         Long invitationId,
         @Schema(description = "Internal sender user id.", example = "18")
         Long senderUserId,
-        @Schema(description = "Sender email address.", example = "sender@example.com")
-        String senderEmail,
+        @Schema(description = "Sender E.164 phone number.", example = "+32468009911")
+        String senderPhoneNumber,
         @Schema(description = "Sender display name.", example = "Sender")
         String senderDisplayName,
         @Schema(description = "Invitation status.", example = "PENDING")

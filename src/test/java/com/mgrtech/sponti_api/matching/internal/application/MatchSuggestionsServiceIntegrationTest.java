@@ -783,14 +783,13 @@ public class MatchSuggestionsServiceIntegrationTest {
                 .allSatisfy(match -> assertThat(match.status()).isEqualTo(MatchProposalStatus.ACCEPTED.name()));
     }
 
-    private CreatedUserView createUser(String emailPrefix, String displayName) {
-        return createUser(emailPrefix, displayName, nextPhoneNumber());
+    private CreatedUserView createUser(String userLabel, String displayName) {
+        return createUser(userLabel, displayName, nextPhoneNumber());
     }
 
-    private CreatedUserView createUser(String emailPrefix, String displayName, String phoneNumber) {
+    private CreatedUserView createUser(String userLabel, String displayName, String phoneNumber) {
         return userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        emailPrefix + "@example.com",
                         "hash",
                         displayName,
                         phoneNumber,
