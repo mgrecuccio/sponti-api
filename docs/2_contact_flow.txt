@@ -59,7 +59,7 @@ Only ACCEPTED relationships are considered active.
 
 Step 1 — Sending an Invitation
 
-User A sends an invitation to User B using their email.
+User A sends an invitation to User B using their phone number.
 
 Rules:
 - the invited user must already exist in the system
@@ -173,7 +173,7 @@ Supported operations:
   returns the list of pending invitations
 
 - POST /contacts/invitations
-  sends an invitation by email
+  sends an invitation by phone number
 
 - POST /contacts/invitations/{id}/accept
   accepts an invitation

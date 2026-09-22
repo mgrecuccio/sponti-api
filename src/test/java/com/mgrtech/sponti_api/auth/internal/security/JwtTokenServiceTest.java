@@ -19,7 +19,7 @@ class JwtTokenServiceTest {
     void issueAccessToken_stores_roles_as_flat_claim() {
         var token = service.issueAccessToken(
                 42L,
-                "john@example.com",
+                "+32468009911",
                 List.of("ROLE_USER", "ROLE_ADMIN")
         );
 
@@ -31,7 +31,7 @@ class JwtTokenServiceTest {
     void issueAccessToken_can_extract_user_id() {
         var token = service.issueAccessToken(
                 42L,
-                "john@example.com",
+                "+32468009911",
                 List.of("ROLE_USER")
         );
 
@@ -42,7 +42,7 @@ class JwtTokenServiceTest {
     void issueAccessToken_creates_valid_access_token() {
         var token = service.issueAccessToken(
                 42L,
-                "john@example.com",
+                "+32468009911",
                 List.of("ROLE_USER")
         );
 

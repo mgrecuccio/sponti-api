@@ -7,8 +7,8 @@ import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
-import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
+import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,14 +48,14 @@ class AuthApplicationServiceIntegrationTest {
     }
 
     @Test
-    void register_rejects_duplicate_email_after_normalization() {
+    void register_rejects_duplicate_phone_number_after_normalization() {
         authFacade.register(
                 getRegistrationCommand()
         );
 
         assertThatThrownBy(() -> authFacade.register(
-                new RegisterCommand("  John@Example.com  ", "password2", "Johnny", "+32468009912", "UTC")
-        )).isInstanceOf(EmailAlreadyUsedException.class);
+                new RegisterCommand("password2", "Johnny", "  +32468009911  ", "UTC")
+        )).isInstanceOf(PhoneNumberAlreadyUsedException.class);
     }
 
     @Test
@@ -144,6 +144,6 @@ class AuthApplicationServiceIntegrationTest {
     }
 
     private static @NonNull RegisterCommand getRegistrationCommand() {
-        return new RegisterCommand("john@example.com", "password", "John", "+32468009911", "UTC");
+        return new RegisterCommand("password", "John", "+32468009911", "UTC");
     }
 }

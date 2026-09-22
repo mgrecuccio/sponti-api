@@ -60,13 +60,12 @@ class UserControllerTest {
     void returns_profile_for_authenticated_user() throws Exception {
         given(userFacade.getCurrentUserProfile(42L))
                 .willReturn(new UserPrivateProfileView(
-                        42L, "john@example.com", "+32468009911", "John", "ACTIVE", "utc"
+                        42L, "+32468009911", "John", "ACTIVE", "utc"
                 ));
 
         mockMvc.perform(get("/api/v1/users/me")
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("john@example.com"))
                 .andExpect(jsonPath("$.phoneNumber").value("+32468009911"));
     }
 
@@ -94,7 +93,7 @@ class UserControllerTest {
                 request.phoneNumber()
         ))).thenReturn(new UserProfileView(
                         42L,
-                        "email@test.com",
+                        request.phoneNumber(),
                         request.displayName(),
                         "ACTIVE",
                         request.timezone()
@@ -105,7 +104,7 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(request)))
                 .andExpect(jsonPath("$.id").value(42L))
-                .andExpect(jsonPath("$.email").value("email@test.com"))
+                .andExpect(jsonPath("$.phoneNumber").value(request.phoneNumber()))
                 .andExpect(jsonPath("$.displayName").value(request.displayName()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.timezone").value(request.timezone()));

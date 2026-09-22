@@ -4,7 +4,7 @@ import java.util.List;
 
 public record AuthenticatedUser(
         Long userId,
-        String email,
+        String phoneNumber,
         List<String> roles
 ) {
 }

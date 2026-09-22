@@ -7,10 +7,6 @@ public class StringUtils {
 
     private static final PhoneNumberUtil PHONE_NUMBER_UTIL = PhoneNumberUtil.getInstance();
 
-    public static String normalizeEmail(String email) {
-        return email.trim().toLowerCase();
-    }
-
     public static String normalizeE164PhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.isBlank()) {
             throw new IllegalArgumentException("Phone number must be valid E.164 number");

@@ -47,7 +47,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User","ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User","ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(
@@ -86,7 +86,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(
@@ -137,7 +137,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of());
@@ -180,7 +180,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of());
@@ -229,7 +229,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(
@@ -275,7 +275,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE","Europe/Paris")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE","Europe/Paris")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(
@@ -315,7 +315,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 42L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE","UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE","UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(
@@ -377,7 +377,7 @@ class EffectiveAvailabilityServiceTest {
         Long userId = 1L;
 
         when(userProfileQuery.getProfileById(userId))
-                .thenReturn(Optional.of(new UserProfileView(userId, "user@example.com", "User", "ACTIVE", "UTC")));
+                .thenReturn(Optional.of(new UserProfileView(userId, "+32468009911", "User", "ACTIVE", "UTC")));
 
         when(ruleRepository.findByUserIdAndEnabledTrue(userId))
                 .thenReturn(List.of(

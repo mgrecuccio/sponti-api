@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 
 @Service
@@ -59,23 +58,22 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens register(RegisterCommand command) {
-        log.info("Registration requested: email={}", maskEmail(command.email()));
-        var normalizedEmail = normalizeEmail(command.email());
+        log.info("Registration requested: phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
+        var normalizedPhoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
         var passwordHash = passwordEncoder.encode(command.password());
 
         var createdUser = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        normalizedEmail,
                         passwordHash,
                         command.displayName(),
-                        normalizeE164PhoneNumber(command.phoneNumber()),
+                        normalizedPhoneNumber,
                         command.timezone()
                 )
         );
 
         var accessToken = jwtTokenService.issueAccessToken(
                 createdUser.id(),
-                command.email(),
+                createdUser.phoneNumber(),
                 DEFAULT_ROLES
         );
         var refreshToken = refreshTokenService.issue(createdUser.id());
@@ -111,7 +109,7 @@ class AuthApplicationService implements AuthFacade {
 
         String accessToken = jwtTokenService.issueAccessToken(
                 user.id(),
-                user.email(),
+                user.phoneNumber(),
                 DEFAULT_ROLES
         );
 
@@ -137,7 +135,7 @@ class AuthApplicationService implements AuthFacade {
 
         String accessToken = jwtTokenService.issueAccessToken(
                 user.id(),
-                user.email(),
+                user.phoneNumber(),
                 DEFAULT_ROLES
         );
 
@@ -158,19 +156,6 @@ class AuthApplicationService implements AuthFacade {
                 .orElseThrow(() -> new UserNotFoundException("Impossible to revoke tokens: user does not exist."));
 
         refreshTokenService.revokeAllForUser(user.id());
-    }
-
-    private String maskEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return "na";
-        }
-
-        int atIndex = email.indexOf('@');
-        if (atIndex <= 1) {
-            return "***";
-        }
-
-        return email.charAt(0) + "***" + email.substring(atIndex);
     }
 
     private String maskPhoneNumber(String phoneNumber) {

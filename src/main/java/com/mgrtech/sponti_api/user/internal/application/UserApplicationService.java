@@ -1,6 +1,5 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
-import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
@@ -27,7 +26,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeEmail;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.defaultMatchingPreferencesView;
 import static com.mgrtech.sponti_api.user.internal.domain.UserEntity.toProfileView;
@@ -122,14 +120,8 @@ public class UserApplicationService implements
     @Override
     @Transactional
     public CreatedUserView createUser(CreateUserCommand command) {
-        log.info("Registering user: email={}", command.email());
-        var normalizedEmail = normalizeEmail(command.email());
         var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
-
-        if(userRepository.existsByEmail(normalizedEmail)) {
-            log.warn("Registration blocked: email={} already exists", command.email());
-            throw new EmailAlreadyUsedException("Email already used");
-        }
+        log.info("Registering user: phoneNumber={}", phoneNumber);
 
         if(userRepository.existsByPhoneNumber(phoneNumber)) {
             log.warn("Registration blocked: phoneNumber={} already exists", phoneNumber);
@@ -137,7 +129,6 @@ public class UserApplicationService implements
         }
 
         var user = new UserEntity(
-                normalizedEmail,
                 command.passwordHash(),
                 command.displayName(),
                 phoneNumber,
@@ -150,7 +141,6 @@ public class UserApplicationService implements
 
         return new CreatedUserView(
                 persistedUser.getId(),
-                persistedUser.getEmail(),
                 persistedUser.getPhoneNumber(),
                 persistedUser.getDisplayName(),
                 persistedUser.getStatusAsString()

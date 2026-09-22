@@ -2,7 +2,6 @@ package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
-import com.mgrtech.sponti_api.shared.error.EmailAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
@@ -68,7 +67,6 @@ class UserApplicationServiceIntegrationTest {
     void create_user_persists_and_returns_view() {
         var result = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "test@email.com",
                         "password-hash",
                         "nickname",
                         "+32468009910",
@@ -76,11 +74,11 @@ class UserApplicationServiceIntegrationTest {
                 )
         );
 
-        assertThat(result.email()).isEqualTo("test@email.com");
+        assertThat(result.phoneNumber()).isEqualTo("+32468009910");
 
         var profile = userProfileQuery.getProfileById(result.id());
         assertThat(profile).isPresent();
-        assertThat(profile.get().email()).isEqualTo("test@email.com");
+        assertThat(profile.get().phoneNumber()).isEqualTo("+32468009910");
         assertThat(profile.get().displayName()).isEqualTo("nickname");
         assertThat(profile.get().timezone()).isEqualTo("UTC");
 
@@ -108,7 +106,6 @@ class UserApplicationServiceIntegrationTest {
         final var phoneNumber = "+32470123344";
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "test@email.com",
                         "password-hash",
                         "nickname",
                         phoneNumber,
@@ -119,7 +116,6 @@ class UserApplicationServiceIntegrationTest {
         assertThat(userRepository.existsByPhoneNumber(phoneNumber)).isTrue();
 
         var privateProfile = userFacade.getCurrentUserProfile(created.id());
-        assertThat(privateProfile.email()).isEqualTo("test@email.com");
         assertThat(privateProfile.phoneNumber()).isEqualTo(phoneNumber);
 
         assertThat(userContactInfoQuery.hasPhoneNumber(created.id())).isTrue();
@@ -130,7 +126,6 @@ class UserApplicationServiceIntegrationTest {
     void create_user_normalizes_phone_number_before_persisting() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "test@email.com",
                         "password-hash",
                         "nickname",
                         " +32469887744 ",
@@ -146,10 +141,10 @@ class UserApplicationServiceIntegrationTest {
     @Test
     void get_profiles_by_ids_returns_profiles_keyed_by_user_id() {
         var first = userRegistrationFacade.createUser(
-                new CreateUserCommand("first@email.com", "password-hash", "First User", "+32468009911", "UTC")
+                new CreateUserCommand("password-hash", "First User", "+32468009911", "UTC")
         );
         var second = userRegistrationFacade.createUser(
-                new CreateUserCommand("second@email.com", "password-hash", "Second User", "+32468009912", "UTC")
+                new CreateUserCommand("password-hash", "Second User", "+32468009912", "UTC")
         );
 
         var profiles = userProfileQuery.getProfilesByIds(List.of(first.id(), second.id(), 999L, first.id()));
@@ -163,7 +158,6 @@ class UserApplicationServiceIntegrationTest {
     void create_user_rejects_when_phone_number_null() {
         assertThatThrownBy(() -> userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "test@email.com",
                         "password-hash",
                         "nickname",
                         null,
@@ -176,7 +170,6 @@ class UserApplicationServiceIntegrationTest {
     void create_user_rejects_when_phone_number_is_empty() {
         assertThatThrownBy(() -> userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "test@email.com",
                         "password-hash",
                         "nickname",
                         "",
@@ -189,7 +182,6 @@ class UserApplicationServiceIntegrationTest {
     void create_user_rejects_duplicate_phone_number() {
         userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash1",
                         "John",
                         "+32455786633",
@@ -198,32 +190,14 @@ class UserApplicationServiceIntegrationTest {
         );
 
         assertThatThrownBy(() -> userRegistrationFacade.createUser(
-                new CreateUserCommand(" another@example.com ", "hash2", "Other", "+32455786633", "UTC")
+                new CreateUserCommand("hash2", "Other", "+32455786633", "UTC")
         )).isInstanceOf(PhoneNumberAlreadyUsedException.class);
-    }
-
-    @Test
-    void create_user_rejects_duplicate_email_after_normalization() {
-        userRegistrationFacade.createUser(
-                new CreateUserCommand(
-                        "john@example.com",
-                        "hash1",
-                        "John",
-                        "+32468009913",
-                        "UTC"
-                )
-        );
-
-        assertThatThrownBy(() -> userRegistrationFacade.createUser(
-                new CreateUserCommand(" John@Example.com ", "hash2", "Johnny", "+32468009914", "UTC")
-        )).isInstanceOf(EmailAlreadyUsedException.class);
     }
 
     @Test
     void find_by_phone_number_normalizes_input() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009911",
@@ -241,7 +215,6 @@ class UserApplicationServiceIntegrationTest {
     void get_default_matching_user_preferences() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009915",
@@ -266,7 +239,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009916",
@@ -288,7 +260,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile_with_phone_number() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009917",
@@ -328,7 +299,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile_normalizes_phone_number_before_persisting() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009918",
@@ -352,7 +322,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile_allows_keeping_same_phone_number() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009911",
@@ -377,7 +346,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile_rejects_empty_phone_number() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009911",
@@ -404,7 +372,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_profile_throws_conflict_error_if_phone_number_not_unique() {
         userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "user1@example.com",
                         "hash",
                         "John",
                         "+32468009911",
@@ -414,7 +381,6 @@ class UserApplicationServiceIntegrationTest {
 
         var user2 = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "user2@example.com",
                         "hash",
                         "John",
                         "+32468009919",
@@ -442,7 +408,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_preferences() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009920",
@@ -500,7 +465,6 @@ class UserApplicationServiceIntegrationTest {
     void update_user_preferences_fails_if_preferences_not_found() {
         var created = userRegistrationFacade.createUser(
                 new CreateUserCommand(
-                        "john@example.com",
                         "hash",
                         "John",
                         "+32468009921",

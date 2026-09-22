@@ -19,9 +19,6 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
     @Column(name = "phone_number", nullable = false, unique = true, length = 16)
     private String phoneNumber;
 
@@ -56,13 +53,11 @@ public class UserEntity {
     private Instant lastUpdatedAt;
 
     public UserEntity(
-            String email,
             String passwordHash,
             String displayName,
             String phoneNumber,
             String timezone
     ) {
-        this.email = email;
         this.passwordHash = passwordHash;
         this.displayName = displayName;
         this.phoneNumber = phoneNumber;
@@ -86,7 +81,7 @@ public class UserEntity {
     public static UserCredentialsView toCredentialsView(UserEntity user) {
         return new UserCredentialsView(
                 user.getId(),
-                user.getEmail(),
+                user.getPhoneNumber(),
                 user.getPasswordHash()
         );
     }
@@ -94,7 +89,7 @@ public class UserEntity {
     public static UserProfileView toProfileView(UserEntity user) {
         return new UserProfileView(
                 user.getId(),
-                user.getEmail(),
+                user.getPhoneNumber(),
                 user.getDisplayName(),
                 user.getStatusAsString(),
                 user.getTimezone()
@@ -104,7 +99,6 @@ public class UserEntity {
     public static UserPrivateProfileView toPrivateProfileView(UserEntity user) {
         return new UserPrivateProfileView(
                 user.getId(),
-                user.getEmail(),
                 user.getPhoneNumber(),
                 user.getDisplayName(),
                 user.getStatusAsString(),
@@ -113,7 +107,7 @@ public class UserEntity {
     }
 
     public static UserLookupView toLookupView(UserEntity user) {
-        return new UserLookupView(user.getId(), user.getEmail());
+        return new UserLookupView(user.getId(), user.getPhoneNumber());
     }
 
     public static UserMatchingPreferencesView defaultMatchingPreferencesView(UserEntity user) {

@@ -374,7 +374,7 @@ class ContactApplicationService implements ContactFacade {
         return new PendingContactInvitationView(
                 invitation.getId(),
                 invitation.getSenderUserId(),
-                senderProfile.email(),
+                senderProfile.phoneNumber(),
                 senderProfile.displayName(),
                 invitation.getStatusString(),
                 invitation.getCreatedAt()
@@ -383,9 +383,9 @@ class ContactApplicationService implements ContactFacade {
 
     private SenderProfile loadSenderProfile(Long senderUserId) {
         return userProfileQuery.getProfileById(senderUserId)
-                .map(profile -> new SenderProfile(profile.email(), profile.displayName()))
+                .map(profile -> new SenderProfile(profile.phoneNumber(), profile.displayName()))
                 .orElseGet(() -> new SenderProfile(null, null));
     }
 
-    private record SenderProfile(String email, String displayName) {}
+    private record SenderProfile(String phoneNumber, String displayName) {}
 }

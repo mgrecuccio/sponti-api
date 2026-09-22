@@ -279,7 +279,7 @@ class ContactControllerTest {
                 .willReturn(List.of(new PendingContactInvitationView(
                         110L,
                         18L,
-                        "sender@example.com",
+                        "+32468009911",
                         "Sender",
                         "PENDING",
                         Instant.now()
@@ -290,7 +290,7 @@ class ContactControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].invitationId").value(110L))
                 .andExpect(jsonPath("$[0].senderUserId").value(18L))
-                .andExpect(jsonPath("$[0].senderEmail").value("sender@example.com"))
+                .andExpect(jsonPath("$[0].senderPhoneNumber").value("+32468009911"))
                 .andExpect(jsonPath("$[0].senderDisplayName").value("Sender"))
                 .andExpect(jsonPath("$[0].nickName").doesNotExist())
                 .andExpect(jsonPath("$[0].status").value("PENDING"));

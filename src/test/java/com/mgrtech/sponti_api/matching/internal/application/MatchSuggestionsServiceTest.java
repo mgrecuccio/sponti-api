@@ -95,14 +95,14 @@ class MatchSuggestionsServiceTest {
         when(userProfileQuery.getProfilesByIds(Set.of(USER_ID)))
                 .thenReturn(Map.of(
                         USER_ID,
-                        new UserProfileView(USER_ID, "initiator@example.com", "Initiator User", "ACTIVE", "UTC")
+                        new UserProfileView(USER_ID, "+32468009911", "Initiator User", "ACTIVE", "UTC")
                 ));
         when(userProfileQuery.getProfilesByIds(Set.of(USER_ID, CANDIDATE_ID)))
                 .thenReturn(Map.of(
                         USER_ID,
-                        new UserProfileView(USER_ID, "initiator@example.com", "Initiator User", "ACTIVE", "UTC"),
+                        new UserProfileView(USER_ID, "+32468009911", "Initiator User", "ACTIVE", "UTC"),
                         CANDIDATE_ID,
-                        new UserProfileView(CANDIDATE_ID, "candidate@example.com", "Candidate User", "ACTIVE", "UTC")
+                        new UserProfileView(CANDIDATE_ID, "+32468009912", "Candidate User", "ACTIVE", "UTC")
                 ));
         when(contactQuery.getAcceptedContacts(USER_ID))
                 .thenReturn(List.of(new ContactView(
