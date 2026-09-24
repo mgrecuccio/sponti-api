@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.availability.internal.domain;
 
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.availability.internal.exception.InvalidAvailabilityOverrideTimeRangeException;
 import jakarta.persistence.*;
@@ -60,5 +61,16 @@ public class AvailabilityOverrideEntity {
         if (startDateTime == null || endDateTime == null || !startDateTime.isBefore(endDateTime)) {
             throw new InvalidAvailabilityOverrideTimeRangeException("Availability override startDateTime must be before endDateTime");
         }
+    }
+
+    public static AvailabilityOverrideView toView(AvailabilityOverrideEntity entity) {
+        return new AvailabilityOverrideView(
+                entity.getId(),
+                entity.getUserId(),
+                entity.getStartDateTime(),
+                entity.getEndDateTime(),
+                entity.getType(),
+                entity.getCreatedAt()
+        );
     }
 }

@@ -58,7 +58,7 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens register(RegisterCommand command) {
-        log.info("Registration requested: phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
+        log.info("Registration requested: number={}", maskPhoneNumber(command.phoneNumber()));
         var normalizedPhoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
         var passwordHash = passwordEncoder.encode(command.password());
 
@@ -67,7 +67,8 @@ class AuthApplicationService implements AuthFacade {
                         passwordHash,
                         command.displayName(),
                         normalizedPhoneNumber,
-                        command.timezone()
+                        command.timezone(),
+                        command.clientIp()
                 )
         );
 
@@ -90,20 +91,20 @@ class AuthApplicationService implements AuthFacade {
 
     @Override
     public AuthTokens login(LoginCommand command) {
-        log.info("Login requested: phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
+        log.info("Login requested: number={}", maskPhoneNumber(command.phoneNumber()));
 
         var normalizedPhoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
 
         var user = userCredentialsQuery.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> {
                     metrics.authFailure("unknown_phone_number");
-                    log.warn("Login rejected: unknown phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
+                    log.warn("Login rejected: unknown number={}", maskPhoneNumber(command.phoneNumber()));
                     return new BadCredentialsException("Bad Credentials");
                 });
 
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
             metrics.authFailure("bad_password");
-            log.warn("Login rejected: bad credentials for phoneNumber={}", maskPhoneNumber(command.phoneNumber()));
+            log.warn("Login rejected: bad credentials for number={}", maskPhoneNumber(command.phoneNumber()));
             throw new BadCredentialsException("Bad credentials");
         }
 

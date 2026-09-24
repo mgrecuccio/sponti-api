@@ -4,9 +4,13 @@ import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
+import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
+import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
+import com.mgrtech.sponti_api.user.api.event.UserPhoneNumberChangedEvent;
 import com.mgrtech.sponti_api.user.api.query.*;
 import com.mgrtech.sponti_api.user.api.view.*;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
@@ -16,6 +20,7 @@ import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,12 +46,14 @@ public class UserApplicationService implements
         UserProfileQuery,
         UserLookupQuery,
         UserMatchingPreferencesQuery,
-        UserContactInfoQuery
+        UserContactInfoQuery,
+        UserVerificationFacade
 {
     private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
 
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -121,10 +128,10 @@ public class UserApplicationService implements
     @Transactional
     public CreatedUserView createUser(CreateUserCommand command) {
         var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
-        log.info("Registering user: phoneNumber={}", phoneNumber);
+        log.info("Registering user: number={}", phoneNumber);
 
         if(userRepository.existsByPhoneNumber(phoneNumber)) {
-            log.warn("Registration blocked: phoneNumber={} already exists", phoneNumber);
+            log.warn("Registration blocked: number={} already exists", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
 
@@ -137,6 +144,11 @@ public class UserApplicationService implements
 
         var persistedUser = userRepository.save(user);
         userPreferenceRepository.save(new UserPreferenceEntity(persistedUser));
+        eventPublisher.publishEvent(new UserCreatedEvent(
+                persistedUser.getId(),
+                persistedUser.getPhoneNumber(),
+                command.clientIp()
+        ));
         log.info("User registered: userId={}", persistedUser.getId());
 
         return new CreatedUserView(
@@ -157,11 +169,22 @@ public class UserApplicationService implements
                         .orElseThrow(() -> new UserNotFoundException("Impossible to update the profile: user not found."));
 
         if(userRepository.existsByPhoneNumberAndIdNot(phoneNumber, userId)) {
-            log.warn("Profile update blocked: phoneNumber={} already exists for another user", phoneNumber);
+            log.warn("Profile update blocked: number={} already exists for another user", phoneNumber);
             throw new PhoneNumberAlreadyUsedException("Phone number already used");
         }
 
+        var phoneNumberChanged = !phoneNumber.equals(user.getPhoneNumber());
+        if(phoneNumberChanged) {
+            log.info("Phone number changed for userId={}. Resetting verification.", userId);
+            user.resetVerification();
+        }
+
         user.update(command.displayName(), command.timezone(), phoneNumber);
+        if(phoneNumberChanged) {
+            eventPublisher.publishEvent(new UserPhoneNumberChangedEvent(userId, phoneNumber));
+            log.info("New OTP code requested for userId={}", userId);
+        }
+
         log.info("UserId={} updated.", userId);
         return toProfileView(user);
     }
@@ -199,4 +222,16 @@ public class UserApplicationService implements
         return toMatchingPreferencesView(user, preferences);
     }
 
+    @Override
+    @Transactional
+    public void verify(VerifyUserPhoneCommand command) {
+        var userid = command.userId();
+        log.info("verifying phone number for userid={}", userid);
+
+        var user = userRepository.findById(userid)
+                .orElseThrow(() -> new UserNotFoundException("impossible to verify the user: user not found."));
+
+        user.verify();
+        log.info("Phone number for userid={} verified", userid);
+    }
 }

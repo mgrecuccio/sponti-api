@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.availability.internal.domain;
 
+import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.availability.internal.exception.InvalidAvailabilityRuleTimeRangeException;
 import jakarta.persistence.*;
@@ -91,5 +92,19 @@ public class AvailabilityRuleEntity {
         this.endTime = endTime;
         this.channelType = channelType;
         this.enabled = enabled;
+    }
+
+    public static AvailabilityRuleView toView(AvailabilityRuleEntity entity) {
+        return new AvailabilityRuleView(
+                entity.getId(),
+                entity.getUserId(),
+                entity.getDayOfWeek(),
+                entity.getStartTime(),
+                entity.getEndTime(),
+                entity.getChannelType(),
+                entity.isEnabled(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
     }
 }

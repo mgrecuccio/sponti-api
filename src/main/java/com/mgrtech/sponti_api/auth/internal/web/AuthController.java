@@ -5,17 +5,20 @@ import com.mgrtech.sponti_api.auth.api.AuthTokens;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
+import static com.mgrtech.sponti_api.shared.utils.HttpRequestUtils.extractClientIp;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -32,13 +35,14 @@ class AuthController {
     @SecurityRequirements
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a new user")
-    AuthTokens register(@Valid @RequestBody RegisterRequest request) {
+    AuthTokens register(HttpServletRequest servletRequest, @Valid @RequestBody RegisterRequest request) {
         return authFacade.register(
                 new RegisterCommand(
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
-                        request.timezone()
+                        request.timezone(),
+                        extractClientIp(servletRequest)
                 )
         );
     }
@@ -63,16 +67,6 @@ class AuthController {
     @Operation(summary = "Logout and revoke refresh tokens")
     void logout(Authentication authentication) {
         authFacade.logout(extractUserId(authentication));
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if (principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     @Schema(description = "Register request payload")

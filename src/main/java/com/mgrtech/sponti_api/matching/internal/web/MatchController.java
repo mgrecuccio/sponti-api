@@ -7,7 +7,6 @@ import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.matching.internal.application.MatchingFacade;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -19,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
 
 @RestController
 @RequestMapping("/api/v1/matches")
@@ -87,16 +88,6 @@ class MatchController {
     public ContactLinkView contactLink(Authentication authentication, @PathVariable Long matchId) {
         var userId = extractUserId(authentication);
         return matchingFacade.createContactLink(matchId, userId);
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if(principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     record CreateMatchRequest(

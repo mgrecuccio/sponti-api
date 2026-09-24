@@ -3,7 +3,6 @@ package com.mgrtech.sponti_api.notification.internal.web;
 import com.mgrtech.sponti_api.notification.internal.application.DeviceTokenApplicationService;
 import com.mgrtech.sponti_api.notification.internal.application.command.RegisterDeviceTokenCommand;
 import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,6 +14,8 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
 
 @RestController
 @RequestMapping("/api/v1/notifications/devices")
@@ -54,16 +55,6 @@ class NotificationDeviceController {
             @Valid @RequestBody DeleteDeviceTokenRequest request
     ) {
         service.delete(extractUserId(authentication), request.token());
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if (principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     @Schema(description = "Register notification device token request payload")
