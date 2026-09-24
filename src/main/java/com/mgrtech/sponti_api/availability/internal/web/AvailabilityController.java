@@ -9,7 +9,6 @@ import com.mgrtech.sponti_api.availability.internal.application.view.Availabilit
 import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,6 +24,8 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
 
 
 @RestController
@@ -134,15 +135,6 @@ class AvailabilityController {
     ) {
         var userId = extractUserId(authentication);
         return availabilityFacade.getEffectiveAvailability(userId, from, to);
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if (principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     @Schema(description = "Create Availability Rule request payload")

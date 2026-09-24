@@ -1,13 +1,12 @@
 package com.mgrtech.sponti_api.availability.internal.application;
 
-import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
+import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
+import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
-import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
-import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideEntity;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityRuleEntity;
 import com.mgrtech.sponti_api.availability.internal.exception.AvailabilityRuleNotFoundException;
@@ -21,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+
+import static com.mgrtech.sponti_api.availability.internal.domain.AvailabilityRuleEntity.toView;
 
 @Service
 @Transactional
@@ -38,7 +39,7 @@ public class AvailabilityApplicationService implements AvailabilityFacade, Effec
         log.info("Availability rules requested: userId={}", userId);
         return availabilityRuleRepository.findByUserIdOrderByDayOfWeekAscStartTimeAsc(userId)
                 .stream()
-                .map(this::toView)
+                .map(AvailabilityRuleEntity::toView)
                 .toList();
     }
 
@@ -72,7 +73,7 @@ public class AvailabilityApplicationService implements AvailabilityFacade, Effec
                 command.enabled()
         );
         log.info("Availability rule updated: userId={} ruleId={}", userId, ruleId);
-        return toView(entity);
+        return AvailabilityRuleEntity.toView(entity);
     }
 
     @Override
@@ -95,7 +96,7 @@ public class AvailabilityApplicationService implements AvailabilityFacade, Effec
 
         return overrides
                 .stream()
-                .map(this::toView)
+                .map(AvailabilityOverrideEntity::toView)
                 .toList();
     }
 
@@ -110,7 +111,7 @@ public class AvailabilityApplicationService implements AvailabilityFacade, Effec
         );
 
         log.info("Availability override created: userId={} overrideId={}", userId, entity.getId());
-        return toView(availabilityOverrideRepository.save(entity));
+        return AvailabilityOverrideEntity.toView(availabilityOverrideRepository.save(entity));
     }
 
     @Override
@@ -131,30 +132,5 @@ public class AvailabilityApplicationService implements AvailabilityFacade, Effec
                 .stream()
                 .map(window -> new EffectiveAvailabilityView(window.start(), window.end(), window.channelType()))
                 .toList();
-    }
-
-    private AvailabilityRuleView toView(AvailabilityRuleEntity entity) {
-        return new AvailabilityRuleView(
-                entity.getId(),
-                entity.getUserId(),
-                entity.getDayOfWeek(),
-                entity.getStartTime(),
-                entity.getEndTime(),
-                entity.getChannelType(),
-                entity.isEnabled(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
-
-    private AvailabilityOverrideView toView(AvailabilityOverrideEntity entity) {
-        return new AvailabilityOverrideView(
-                entity.getId(),
-                entity.getUserId(),
-                entity.getStartDateTime(),
-                entity.getEndDateTime(),
-                entity.getType(),
-                entity.getCreatedAt()
-        );
     }
 }

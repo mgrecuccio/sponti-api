@@ -78,6 +78,12 @@ public class UserEntity {
         this.phoneNumber = phoneNumber;
     }
 
+    public void verify() {
+        this.phoneNumberVerified = true;
+        this.whatsAppOptIn = true;
+        this.phoneNumberVerifiedAt = Instant.now();
+    }
+
     public static UserCredentialsView toCredentialsView(UserEntity user) {
         return new UserCredentialsView(
                 user.getId(),
@@ -121,5 +127,11 @@ public class UserEntity {
                 true,
                 true
         );
+    }
+
+    public void resetVerification() {
+        this.phoneNumberVerified = false;
+        this.whatsAppOptIn = false;
+        this.phoneNumberVerifiedAt = null;
     }
 }

@@ -52,7 +52,8 @@ class AuthControllerTest {
                         request.password(),
                         request.displayName(),
                         request.phoneNumber(),
-                        request.timezone()
+                        request.timezone(),
+                        "127.0.0.1"
                 )))
                 .willReturn(new AuthTokens(
                         "access-token",

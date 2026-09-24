@@ -25,8 +25,4 @@ public class StringUtils {
             throw new IllegalArgumentException("Phone number must be valid E.164 number", e);
         }
     }
-
-    public static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 }

@@ -6,7 +6,6 @@ import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
 
 @RestController
 @RequestMapping("/api/v1/contacts")
@@ -149,16 +150,6 @@ class ContactController {
     public List<PendingContactInvitationView> getPendingInvitations(Authentication authentication) {
         var recipientUserId = extractUserId(authentication);
         return contactFacade.getPendingIncomingInvitations(recipientUserId);
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if(principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     @Schema(description = "Send Contact Invitation request payload")

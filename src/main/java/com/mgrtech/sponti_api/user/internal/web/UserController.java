@@ -1,6 +1,5 @@
 package com.mgrtech.sponti_api.user.internal.web;
 
-import com.mgrtech.sponti_api.shared.error.UnsupportedAuthenticationException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
@@ -23,6 +22,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalTime;
+
+import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -79,16 +80,6 @@ public class UserController {
         var userId = extractUserId(authentication);
         return userMatchingPreferencesQuery.getMatchingPreferences(userId)
                 .orElseThrow(() -> new UserNotFoundException("Authenticated user preferences not found"));
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        var principal = authentication.getPrincipal();
-
-        if(principal instanceof String value) {
-            return Long.valueOf(value);
-        }
-
-        throw new UnsupportedAuthenticationException("Unsupported authentication principal");
     }
 
     @Schema(description = "Request to update the user profile")

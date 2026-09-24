@@ -98,4 +98,54 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR.value(), request.getMethod(), request.getRequestURI(), ex);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.INTERNAL_SERVER_ERROR, "Internal server error", request.getRequestURI());
     }
+
+    @ExceptionHandler(UnexpectedPhoneNumberException.class)
+    ProblemDetail handleUnexpectedPhoneNumberException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.BAD_REQUEST.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, ApiErrorCode.UNEXPECTED_PHONE_NUMBER, "Invalid request", request.getRequestURI());
+    }
+
+    @ExceptionHandler(PhoneVerificationException.class)
+    ProblemDetail handlePhoneVerificationException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.SERVICE_UNAVAILABLE.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, ApiErrorCode.PHONE_VERIFICATION_EXCEPTION, "Service Unavailable", request.getRequestURI());
+    }
+
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    ProblemDetail handleInvalidVerificationCodeException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.BAD_REQUEST.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, ApiErrorCode.INVALID_VERIFICATION_CODE, "Invalid request", request.getRequestURI());
+    }
+
+    @ExceptionHandler(VerificationNotFoundException.class)
+    ProblemDetail handleInvalidVerification(VerificationNotFoundException ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.NOT_FOUND.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.NOT_FOUND, ApiErrorCode.INVALID_VERIFICATION_EXCEPTION, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(ExpiredVerificationException.class)
+    ProblemDetail handleExpiredVerificationException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.BAD_REQUEST.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, ApiErrorCode.EXPIRED_VERIFICATION, "Invalid request", request.getRequestURI());
+    }
+
+    @ExceptionHandler(TooManyAttemptsException.class)
+    ProblemDetail handleTooManyAttemptsException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.TOO_MANY_REQUESTS.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.TOO_MANY_REQUESTS, ApiErrorCode.TOO_MANY_ATTEMPTS, "Too many attempts", request.getRequestURI());
+    }
+
+    @ExceptionHandler(AlreadyVerifiedVerificationException.class)
+    ProblemDetail handleAlreadyVerifiedVerificationException(Exception ex, HttpServletRequest request) {
+        log.warn("Request failed: status={} method={} path={} error={}",
+                HttpStatus.BAD_REQUEST.value(), request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, ApiErrorCode.ALREADY_VERIFIED, "Invalid request", request.getRequestURI());
+    }
+
 }

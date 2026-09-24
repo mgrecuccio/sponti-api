@@ -105,7 +105,7 @@ class MatchingNotificationListenerTest {
 
     private void assertNoSensitiveContactPayload(SendNotificationCommand command) {
         assertThat(command.data()).doesNotContainKeys(
-                "phoneNumber",
+                "number",
                 "rawPhoneNumber",
                 "whatsappUrl",
                 "whatsAppUrl",

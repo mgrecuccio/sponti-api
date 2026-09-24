@@ -44,6 +44,15 @@ logging:
         include: true
 
 sponti:
+  smsbox:
+    base-url: https://core.smsbox.be/api
+    api-key: ${SMSBOX_API_KEY}
+    otp-text: "Your verification code is {OTP}"
+  otp:
+    rate-limit:
+      window: 1h
+      max-per-user: 5
+      max-per-ip: 20
   matching:
     search-window: 4h
     minimum-overlap: 20m
