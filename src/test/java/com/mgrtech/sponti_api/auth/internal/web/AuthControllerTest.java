@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.auth.internal.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
+import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
@@ -18,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -278,6 +280,64 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(authFacade).logout(42L);
+    }
+
+    @Test
+    void change_password_updates_password_for_authenticated_user() throws Exception {
+        var request = new AuthController.ChangePasswordRequest(
+                "current-password",
+                "new-password"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/change-password")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(authFacade).changePassword(new ChangePasswordCommand(
+                42L,
+                request.currentPassword(),
+                request.newPassword()
+        ));
+    }
+
+    @Test
+    void change_password_returns_bad_request_if_request_is_invalid() throws Exception {
+        var request = new AuthController.ChangePasswordRequest(
+                "",
+                "new-password"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/change-password")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void change_password_returns_unauthorized_if_current_password_is_wrong() throws Exception {
+        var request = new AuthController.ChangePasswordRequest(
+                "wrong-password",
+                "new-password"
+        );
+
+        willThrow(new BadCredentialsException("Bad credentials"))
+                .given(authFacade)
+                .changePassword(new ChangePasswordCommand(
+                        42L,
+                        request.currentPassword(),
+                        request.newPassword()
+                ));
+
+        mockMvc.perform(post("/api/v1/auth/change-password")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"));
     }
 
 }

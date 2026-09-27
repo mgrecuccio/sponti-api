@@ -6,8 +6,10 @@ import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
+import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
 import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
@@ -45,6 +47,7 @@ public class UserApplicationService implements
         UserFacade,
         UserPreferenceFacade,
         UserRegistrationFacade,
+        UserPasswordFacade,
         UserCredentialsQuery,
         UserProfileQuery,
         UserLookupQuery,
@@ -161,6 +164,18 @@ public class UserApplicationService implements
                 persistedUser.getDisplayName(),
                 persistedUser.getStatusAsString()
         );
+    }
+
+    @Override
+    @Transactional
+    public void updatePassword(UpdateUserPasswordCommand command) {
+        log.info("Updating password for userId={}", command.userId());
+
+        var user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new UserNotFoundException("Impossible to update password: user not found."));
+
+        user.updatePassword(command.passwordHash());
+        log.info("Password updated for userId={}", user.getId());
     }
 
     @Override

@@ -8,5 +8,7 @@ public interface AuthFacade {
 
     AuthTokens refresh(String refreshToken);
 
+    void changePassword(ChangePasswordCommand command);
+
     void logout(Long userId);
 }

@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.auth.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
+import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
@@ -140,6 +141,68 @@ class AuthApplicationServiceIntegrationTest {
         assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
         assertThatThrownBy(() -> authFacade.refresh(loggedIn.refreshToken()))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void change_password_allows_login_with_new_password() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+        var userId = jwtTokenService.extractUserId(registered.accessToken());
+
+        authFacade.changePassword(new ChangePasswordCommand(
+                userId,
+                "password",
+                "new-password"
+        ));
+
+        assertThatThrownBy(() -> authFacade.login(
+                new LoginCommand("+32468009911", "password")
+        )).isInstanceOf(BadCredentialsException.class);
+
+        var result = authFacade.login(
+                new LoginCommand("+32468009911", "new-password")
+        );
+
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(result.refreshToken()).isNotBlank();
+    }
+
+    @Test
+    void change_password_rejects_wrong_current_password() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+        var userId = jwtTokenService.extractUserId(registered.accessToken());
+
+        assertThatThrownBy(() -> authFacade.changePassword(new ChangePasswordCommand(
+                userId,
+                "wrong-password",
+                "new-password"
+        ))).isInstanceOf(BadCredentialsException.class);
+
+        var result = authFacade.login(
+                new LoginCommand("+32468009911", "password")
+        );
+
+        assertThat(result.accessToken()).isNotBlank();
+    }
+
+    @Test
+    void change_password_revokes_existing_refresh_tokens() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+        var userId = jwtTokenService.extractUserId(registered.accessToken());
+
+        authFacade.changePassword(new ChangePasswordCommand(
+                userId,
+                "password",
+                "new-password"
+        ));
+
+        assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
     }
 

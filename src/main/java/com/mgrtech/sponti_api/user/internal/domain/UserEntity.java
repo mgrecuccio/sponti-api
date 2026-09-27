@@ -81,6 +81,10 @@ public class UserEntity {
         this.phoneNumber = phoneNumber;
     }
 
+    public void updatePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public void markPhoneNumberChanged(Instant changedAt) {
         this.phoneNumberChangedAt = changedAt;
     }

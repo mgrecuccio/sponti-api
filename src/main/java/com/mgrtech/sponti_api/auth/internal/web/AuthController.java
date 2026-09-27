@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.auth.internal.web;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
+import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
@@ -69,6 +70,18 @@ class AuthController {
         authFacade.logout(extractUserId(authentication));
     }
 
+    @PostMapping("/change-password")
+    @SecurityRequirement(name = "bearerAuth")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Change password")
+    void changePassword(Authentication authentication, @Valid @RequestBody ChangePasswordRequest request) {
+        authFacade.changePassword(new ChangePasswordCommand(
+                extractUserId(authentication),
+                request.currentPassword(),
+                request.newPassword()
+        ));
+    }
+
     @Schema(description = "Register request payload")
     record RegisterRequest(
             @Schema(example = "strongPassword") @NotBlank String password,
@@ -87,6 +100,13 @@ class AuthController {
     @Schema(description = "Refresh token request payload")
     record RefreshRequest(
             @Schema(example = "opaque-refresh-token") @NotBlank String refreshToken
+    ) {
+    }
+
+    @Schema(description = "Change password request payload")
+    record ChangePasswordRequest(
+            @Schema(example = "currentPassword") @NotBlank String currentPassword,
+            @Schema(example = "newStrongPassword") @NotBlank String newPassword
     ) {
     }
 }

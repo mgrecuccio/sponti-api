@@ -106,6 +106,34 @@ public class OpenApiConfig {
                     path
             ));
         }
+
+        if ("/api/v1/auth/login".equals(path) || "/api/v1/auth/change-password".equals(path)) {
+            addUnauthorizedBadCredentialsExample(operation, path);
+        }
+    }
+
+    private void addUnauthorizedBadCredentialsExample(Operation operation, String path) {
+        var response = operation.getResponses().get("401");
+        if (response == null) {
+            operation.getResponses().addApiResponse("401", errorResponse(
+                    "Credentials were rejected.",
+                    HttpStatus.UNAUTHORIZED,
+                    ApiErrorCode.BAD_CREDENTIALS,
+                    "Bad credentials",
+                    path
+            ));
+            return;
+        }
+
+        response.setDescription(response.getDescription() + " Credentials may also be rejected.");
+        response.getContent()
+                .get(APPLICATION_JSON)
+                .addExamples(ApiErrorCode.BAD_CREDENTIALS.value(), errorExample(
+                        HttpStatus.UNAUTHORIZED,
+                        ApiErrorCode.BAD_CREDENTIALS,
+                        "Bad credentials",
+                        path
+                ));
     }
 
     private boolean requiresBearer(Operation operation) {
