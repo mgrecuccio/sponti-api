@@ -31,6 +31,9 @@ public class UserEntity {
     @Column(name = "phone_number_verified_at")
     private Instant phoneNumberVerifiedAt;
 
+    @Column(name = "phone_number_changed_at")
+    private Instant phoneNumberChangedAt;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -76,6 +79,10 @@ public class UserEntity {
         this.displayName = displayName;
         this.timezone = timezone;
         this.phoneNumber = phoneNumber;
+    }
+
+    public void markPhoneNumberChanged(Instant changedAt) {
+        this.phoneNumberChangedAt = changedAt;
     }
 
     public void verify() {

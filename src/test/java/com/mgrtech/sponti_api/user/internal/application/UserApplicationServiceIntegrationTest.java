@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.user.internal.application;
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
@@ -340,6 +341,36 @@ class UserApplicationServiceIntegrationTest {
         assertThat(privateProfile.displayName()).isEqualTo("John Updated");
         assertThat(privateProfile.timezone()).isEqualTo("Europe/Brussels");
         assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void update_user_profile_rejects_second_phone_number_change_within_one_day() {
+        var created = userRegistrationFacade.createUser(
+                new CreateUserCommand(
+                        "hash",
+                        "John",
+                        "+32468009921",
+                        "UTC"
+                )
+        );
+
+        userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "John Updated",
+                        "Europe/Brussels",
+                        "+32468009922")
+        );
+
+        assertThatThrownBy(() -> userFacade.updateProfile(created.id(),
+                new UpdateUserCommand(
+                        "John Updated Again",
+                        "Europe/Brussels",
+                        "+32468009923")
+        )).isInstanceOf(TooManyAttemptsException.class);
+
+        var privateProfile = userFacade.getCurrentUserProfile(created.id());
+        assertThat(privateProfile.displayName()).isEqualTo("John Updated");
+        assertThat(privateProfile.phoneNumber()).isEqualTo("+32468009922");
     }
 
     @Test

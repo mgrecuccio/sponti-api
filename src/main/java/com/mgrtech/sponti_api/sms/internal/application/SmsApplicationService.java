@@ -192,10 +192,18 @@ public class SmsApplicationService implements OtpFacade {
 
     private VerificationEntity resolveVerification(VerifyOtpCommand command, String phoneNumber) {
         if (command.verificationId() != null && !command.verificationId().isBlank()) {
-            return verificationEntityRepository.findById(UUID.fromString(command.verificationId()))
-                    .orElseThrow(VerificationNotFoundException::new);
+            try {
+                return verificationEntityRepository.findById(UUID.fromString(command.verificationId()))
+                        .orElseGet(() -> latestPendingVerificationFor(phoneNumber));
+            } catch (IllegalArgumentException ignored) {
+                return latestPendingVerificationFor(phoneNumber);
+            }
         }
 
+        return latestPendingVerificationFor(phoneNumber);
+    }
+
+    private VerificationEntity latestPendingVerificationFor(String phoneNumber) {
         return verificationEntityRepository.findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
                         phoneNumber,
                         VerificationPurpose.REGISTRATION,
