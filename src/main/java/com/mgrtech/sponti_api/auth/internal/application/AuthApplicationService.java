@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.auth.internal.application;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
+import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.LoginCommand;
 import com.mgrtech.sponti_api.auth.api.RegisterCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
@@ -9,7 +10,9 @@ import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
+import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import org.slf4j.Logger;
@@ -33,6 +36,7 @@ class AuthApplicationService implements AuthFacade {
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
     private final UserRegistrationFacade userRegistrationFacade;
+    private final UserPasswordFacade userPasswordFacade;
     private final UserCredentialsQuery userCredentialsQuery;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
@@ -42,6 +46,7 @@ class AuthApplicationService implements AuthFacade {
             JwtTokenService jwtTokenService,
             PasswordEncoder passwordEncoder,
             UserRegistrationFacade userRegistrationFacade,
+            UserPasswordFacade userPasswordFacade,
             UserCredentialsQuery userCredentialsQuery,
             RefreshTokenService refreshTokenService,
             JwtProperties jwtProperties,
@@ -50,6 +55,7 @@ class AuthApplicationService implements AuthFacade {
         this.jwtTokenService = jwtTokenService;
         this.passwordEncoder = passwordEncoder;
         this.userRegistrationFacade = userRegistrationFacade;
+        this.userPasswordFacade = userPasswordFacade;
         this.userCredentialsQuery = userCredentialsQuery;
         this.refreshTokenService = refreshTokenService;
         this.jwtProperties = jwtProperties;
@@ -147,6 +153,28 @@ class AuthApplicationService implements AuthFacade {
                 TOKEN_TYPE,
                 jwtProperties.accessTokenMinutes() * 60
         );
+    }
+
+    @Override
+    public void changePassword(ChangePasswordCommand command) {
+        log.info("Password change requested: userId={}", command.userId());
+
+        var user = userCredentialsQuery.findById(command.userId())
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
+
+        if (!passwordEncoder.matches(command.currentPassword(), user.passwordHash())) {
+            metrics.authFailure("bad_current_password");
+            log.warn("Password change rejected: bad current password for userId={}", command.userId());
+            throw new BadCredentialsException("Bad credentials");
+        }
+
+        userPasswordFacade.updatePassword(new UpdateUserPasswordCommand(
+                user.id(),
+                passwordEncoder.encode(command.newPassword())
+        ));
+        refreshTokenService.revokeAllForUser(user.id());
+
+        log.info("Password changed: userId={}", user.id());
     }
 
     @Override
