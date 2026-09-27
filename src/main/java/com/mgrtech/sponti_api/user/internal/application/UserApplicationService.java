@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
+import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
@@ -24,6 +25,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,7 @@ public class UserApplicationService implements
         UserVerificationFacade
 {
     private static final Logger log = LoggerFactory.getLogger(UserApplicationService.class);
+    private static final Duration PHONE_NUMBER_CHANGE_COOLDOWN = Duration.ofDays(1);
 
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
@@ -175,8 +179,11 @@ public class UserApplicationService implements
 
         var phoneNumberChanged = !phoneNumber.equals(user.getPhoneNumber());
         if(phoneNumberChanged) {
+            var phoneNumberChangedAt = Instant.now();
+            assertPhoneNumberChangeAllowed(user, phoneNumberChangedAt);
             log.info("Phone number changed for userId={}. Resetting verification.", userId);
             user.resetVerification();
+            user.markPhoneNumberChanged(phoneNumberChangedAt);
         }
 
         user.update(command.displayName(), command.timezone(), phoneNumber);
@@ -187,6 +194,13 @@ public class UserApplicationService implements
 
         log.info("UserId={} updated.", userId);
         return toProfileView(user);
+    }
+
+    private void assertPhoneNumberChangeAllowed(UserEntity user, Instant now) {
+        var phoneNumberChangedAt = user.getPhoneNumberChangedAt();
+        if (phoneNumberChangedAt != null && phoneNumberChangedAt.plus(PHONE_NUMBER_CHANGE_COOLDOWN).isAfter(now)) {
+            throw new TooManyAttemptsException();
+        }
     }
 
     @Override

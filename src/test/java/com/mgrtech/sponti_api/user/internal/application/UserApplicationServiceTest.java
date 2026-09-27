@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
+import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
@@ -14,9 +15,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +75,7 @@ class UserApplicationServiceTest {
         assertThat(eventCaptor.getValue())
                 .isEqualTo(new UserPhoneNumberChangedEvent(42L, "+32468009912"));
         assertThat(user.getPhoneNumber()).isEqualTo("+32468009912");
+        assertThat(user.getPhoneNumberChangedAt()).isNotNull();
         assertThat(user.isPhoneNumberVerified()).isFalse();
         assertThat(user.isWhatsAppOptIn()).isFalse();
         assertThat(user.getPhoneNumberVerifiedAt()).isNull();
@@ -94,5 +99,58 @@ class UserApplicationServiceTest {
         assertThat(user.isPhoneNumberVerified()).isTrue();
         assertThat(user.isWhatsAppOptIn()).isTrue();
         assertThat(user.getPhoneNumberVerifiedAt()).isNotNull();
+    }
+
+    @Test
+    void updateProfileAllowsKeepingSamePhoneNumberWithinOneDay() {
+        var user = new UserEntity("hash", "John", "+32468009911", "UTC");
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(1, ChronoUnit.HOURS));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByPhoneNumberAndIdNot("+32468009911", 42L)).thenReturn(false);
+
+        service.updateProfile(42L, new UpdateUserCommand(
+                "John Updated",
+                "Europe/Brussels",
+                "+32468009911"
+        ));
+
+        verify(eventPublisher, never()).publishEvent(any());
+        assertThat(user.getDisplayName()).isEqualTo("John Updated");
+        assertThat(user.getTimezone()).isEqualTo("Europe/Brussels");
+        assertThat(user.getPhoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void updateProfileRejectsPhoneNumberChangeWithinOneDay() {
+        var user = new UserEntity("hash", "John", "+32468009911", "UTC");
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(23, ChronoUnit.HOURS));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByPhoneNumberAndIdNot("+32468009912", 42L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.updateProfile(42L, new UpdateUserCommand(
+                "John Updated",
+                "Europe/Brussels",
+                "+32468009912"
+        ))).isInstanceOf(TooManyAttemptsException.class);
+
+        verify(eventPublisher, never()).publishEvent(any());
+        assertThat(user.getPhoneNumber()).isEqualTo("+32468009911");
+    }
+
+    @Test
+    void updateProfileAllowsPhoneNumberChangeAfterOneDay() {
+        var user = new UserEntity("hash", "John", "+32468009911", "UTC");
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(25, ChronoUnit.HOURS));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByPhoneNumberAndIdNot("+32468009912", 42L)).thenReturn(false);
+
+        service.updateProfile(42L, new UpdateUserCommand(
+                "John Updated",
+                "Europe/Brussels",
+                "+32468009912"
+        ));
+
+        verify(eventPublisher).publishEvent(new UserPhoneNumberChangedEvent(42L, "+32468009912"));
+        assertThat(user.getPhoneNumber()).isEqualTo("+32468009912");
     }
 }
