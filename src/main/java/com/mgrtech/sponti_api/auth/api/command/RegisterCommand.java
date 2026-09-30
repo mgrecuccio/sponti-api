@@ -1,4 +1,4 @@
-package com.mgrtech.sponti_api.auth.api;
+package com.mgrtech.sponti_api.auth.api.command;
 
 public record RegisterCommand(
         String password,

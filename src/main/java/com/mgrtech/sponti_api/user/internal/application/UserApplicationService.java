@@ -4,6 +4,12 @@ import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.error.UserPreferencesNotFoundException;
+import com.mgrtech.sponti_api.sms.api.OtpFacade;
+import com.mgrtech.sponti_api.sms.api.OtpPurpose;
+import com.mgrtech.sponti_api.sms.api.command.SendOtpCommand;
+import com.mgrtech.sponti_api.sms.api.command.VerifyOtpCommand;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
 import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
@@ -18,6 +24,7 @@ import com.mgrtech.sponti_api.user.api.query.*;
 import com.mgrtech.sponti_api.user.api.view.*;
 import com.mgrtech.sponti_api.user.internal.domain.UserEntity;
 import com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity;
+import com.mgrtech.sponti_api.user.internal.application.command.VerifyPhoneCommand;
 import com.mgrtech.sponti_api.user.internal.repository.UserPreferenceRepository;
 import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -61,6 +68,7 @@ public class UserApplicationService implements
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final OtpFacade otpFacade;
 
     @Override
     @Transactional(readOnly = true)
@@ -176,6 +184,36 @@ public class UserApplicationService implements
 
         user.updatePassword(command.passwordHash());
         log.info("Password updated for userId={}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public VerificationView resendPhoneVerification(Long userId, String clientIp) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
+
+        return otpFacade.sendOtpCode(
+                new SendOtpCommand(user.getId(), user.getPhoneNumber(), clientIp),
+                OtpPurpose.PROFILE_UPDATE
+        );
+    }
+
+    @Override
+    @Transactional
+    public VerificationResultView verifyPhone(Long userId, VerifyPhoneCommand command) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
+
+        var result = otpFacade.verifyOtpCode(new VerifyOtpCommand(
+                user.getId(),
+                user.getPhoneNumber(),
+                command.verificationId(),
+                command.otpCode(),
+                OtpPurpose.PROFILE_UPDATE
+        ));
+
+        verify(new VerifyUserPhoneCommand(user.getId()));
+        return result;
     }
 
     @Override

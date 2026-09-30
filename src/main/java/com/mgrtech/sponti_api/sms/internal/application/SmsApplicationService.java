@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.sms.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.*;
 import com.mgrtech.sponti_api.sms.api.OtpFacade;
+import com.mgrtech.sponti_api.sms.api.OtpPurpose;
 import com.mgrtech.sponti_api.sms.api.command.SendOtpCommand;
 import com.mgrtech.sponti_api.sms.api.command.VerifyOtpCommand;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
@@ -15,20 +16,11 @@ import com.mgrtech.sponti_api.sms.internal.domain.VerificationEntity;
 import com.mgrtech.sponti_api.sms.internal.domain.VerificationPurpose;
 import com.mgrtech.sponti_api.sms.internal.domain.VerificationStatus;
 import com.mgrtech.sponti_api.sms.internal.repository.VerificationEntityRepository;
-import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
-import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
-import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
-import com.mgrtech.sponti_api.user.api.event.UserPhoneNumberChangedEvent;
-import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
-import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.client.RestClient;
 
 import java.time.Clock;
@@ -36,6 +28,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.maskPhoneNumber;
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizedClientIp;
 
 @Service
 public class SmsApplicationService implements OtpFacade {
@@ -45,74 +40,38 @@ public class SmsApplicationService implements OtpFacade {
     private static final int OTP_VERIFIED = 11;
     private static final Duration RESEND_COOLDOWN = Duration.ofMinutes(5);
 
-    private final UserProfileQuery userProfileQuery;
-    private final UserContactInfoQuery userContactInfoQuery;
     private final RestClient restClient;
     private final SmsProviderProperties smsProviderProperties;
     private final OtpRateLimitProperties otpRateLimitProperties;
     private final VerificationEntityRepository verificationEntityRepository;
-    private final UserVerificationFacade userVerificationFacade;
     private final Clock clock;
 
     public SmsApplicationService(
-            UserProfileQuery userProfileQuery,
-            UserContactInfoQuery userContactInfoQuery,
             @Qualifier("smsBoxRestClient") RestClient restClient,
             SmsProviderProperties smsProviderProperties,
             OtpRateLimitProperties otpRateLimitProperties,
             VerificationEntityRepository verificationEntityRepository,
-            UserVerificationFacade userVerificationFacade,
             Clock clock
     ) {
-        this.userProfileQuery = userProfileQuery;
-        this.userContactInfoQuery = userContactInfoQuery;
         this.restClient = restClient;
         this.smsProviderProperties = smsProviderProperties;
         this.otpRateLimitProperties = otpRateLimitProperties;
         this.verificationEntityRepository = verificationEntityRepository;
-        this.userVerificationFacade = userVerificationFacade;
         this.clock = clock;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    void on(UserPhoneNumberChangedEvent event) {
-        sendOtpCode(new SendOtpCommand(event.userId(), event.phoneNumber()));
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    void on(UserCreatedEvent event) {
-        sendOtpCode(new SendOtpCommand(event.userId(), event.phoneNumber(), event.clientIp()));
-    }
-
     @Override
     @Transactional
-    public VerificationView resendPhoneVerification(Long userId) {
-        return resendPhoneVerification(userId, null);
-    }
-
-    @Override
-    @Transactional
-    public VerificationView resendPhoneVerification(Long userId, String clientIp) {
-        var phoneNumber = userContactInfoQuery.getPhoneNumber(userId)
-                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
-
-        return sendOtpCode(new SendOtpCommand(userId, phoneNumber, clientIp));
-    }
-
-    @Override
-    @Transactional
-    public VerificationView sendOtpCode(SendOtpCommand command) {
+    public VerificationView sendOtpCode(
+            SendOtpCommand command,
+            OtpPurpose purpose
+    ) {
+        var verificationPurpose = toVerificationPurpose(purpose);
         var userId = command.userId();
         var receivedPhoneNumber = command.phoneNumber();
-        log.info("Sending OTP code to userId: {}, number: {}", userId, maskPhoneNumber(receivedPhoneNumber));
+        log.info("Sending OTP code to userId: {}, number: {}, purpose={}", userId, maskPhoneNumber(receivedPhoneNumber), verificationPurpose);
 
-        var user = userProfileQuery.getProfileById(command.userId())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        assertPhoneNumberOwnership(userId, receivedPhoneNumber, user.phoneNumber());
-        assertResendAllowed(command);
+        assertResendAllowed(command, verificationPurpose);
 
         var request = new SmsBoxOtpRequest(
                 toSmsBoxNumber(receivedPhoneNumber),
@@ -135,11 +94,11 @@ public class SmsApplicationService implements OtpFacade {
                 receivedPhoneNumber,
                 userId,
                 normalizedClientIp(command.clientIp()),
-                VerificationPurpose.REGISTRATION,
+                verificationPurpose,
                 Instant.now(clock).plus(10, ChronoUnit.MINUTES)
         ));
 
-        log.info("OTP code sent to userId: {}, number: {}", userId, maskPhoneNumber(receivedPhoneNumber));
+        log.info("OTP code sent to userId: {}, number: {}, purpose={}", userId, maskPhoneNumber(receivedPhoneNumber), verificationPurpose);
         return new VerificationView(otpVerification.getId().toString());
     }
 
@@ -148,13 +107,11 @@ public class SmsApplicationService implements OtpFacade {
     public VerificationResultView verifyOtpCode(VerifyOtpCommand command) {
         var userId = command.userId();
         var verificationId = command.verificationId();
+        var purpose = toVerificationPurpose(command.purpose());
 
-        log.info("Verifying OTP code for userId: {}, verificationId: {}", userId, verificationId);
+        log.info("Verifying OTP code for userId: {}, verificationId: {}, purpose={}", userId, verificationId, purpose);
 
-        var user = userProfileQuery.getProfileById(command.userId())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        VerificationEntity verification = resolveVerification(command, user.phoneNumber());
+        VerificationEntity verification = resolveVerification(command, command.phoneNumber(), purpose);
 
         if (verification.isExpired()) {
             throw new ExpiredVerificationException();
@@ -168,7 +125,7 @@ public class SmsApplicationService implements OtpFacade {
             throw new TooManyAttemptsException();
         }
 
-        assertPhoneNumberOwnership(userId, verification.getPhoneNumber(), user.phoneNumber());
+        assertPhoneNumberOwnership(userId, verification.getPhoneNumber(), command.phoneNumber());
 
         var response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -184,32 +141,47 @@ public class SmsApplicationService implements OtpFacade {
         }
 
         verification.markVerified();
-        userVerificationFacade.verify(new VerifyUserPhoneCommand(userId));
 
-        log.info("OTP code for userId: {}, verificationId: {} verified", userId, verificationId);
+        log.info("OTP code for userId: {}, verificationId: {}, purpose={} verified", userId, verificationId, purpose);
         return new VerificationResultView(userId, true);
     }
 
-    private VerificationEntity resolveVerification(VerifyOtpCommand command, String phoneNumber) {
+    private VerificationEntity resolveVerification(
+            VerifyOtpCommand command,
+            String phoneNumber,
+            VerificationPurpose purpose
+    ) {
         if (command.verificationId() != null && !command.verificationId().isBlank()) {
             try {
                 return verificationEntityRepository.findById(UUID.fromString(command.verificationId()))
-                        .orElseGet(() -> latestPendingVerificationFor(phoneNumber));
+                        .filter(verification -> verification.getUserId().equals(command.userId()))
+                        .filter(verification -> verification.getPhoneNumber().equals(phoneNumber))
+                        .filter(verification -> verification.getPurpose() == purpose)
+                        .orElseGet(() -> latestPendingVerificationFor(phoneNumber, command.userId(), purpose));
             } catch (IllegalArgumentException ignored) {
-                return latestPendingVerificationFor(phoneNumber);
+                return latestPendingVerificationFor(phoneNumber, command.userId(), purpose);
             }
         }
 
-        return latestPendingVerificationFor(phoneNumber);
+        return latestPendingVerificationFor(phoneNumber, command.userId(), purpose);
     }
 
-    private VerificationEntity latestPendingVerificationFor(String phoneNumber) {
-        return verificationEntityRepository.findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+    private VerificationEntity latestPendingVerificationFor(String phoneNumber, Long userId, VerificationPurpose purpose) {
+        return verificationEntityRepository.findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                         phoneNumber,
-                        VerificationPurpose.REGISTRATION,
+                        userId,
+                        purpose,
                         VerificationStatus.PENDING
                 )
                 .orElseThrow(VerificationNotFoundException::new);
+    }
+
+    private VerificationPurpose toVerificationPurpose(OtpPurpose purpose) {
+        return switch (purpose) {
+            case REGISTRATION -> VerificationPurpose.REGISTRATION;
+            case PROFILE_UPDATE -> VerificationPurpose.PROFILE_UPDATE;
+            case PASSWORD_RECOVERY -> VerificationPurpose.PASSWORD_RECOVERY;
+        };
     }
 
     private void assertPhoneNumberOwnership(Long userId, String receivedPhoneNumber, String userPhoneNumber) {
@@ -219,11 +191,11 @@ public class SmsApplicationService implements OtpFacade {
         }
     }
 
-    private void assertResendAllowed(SendOtpCommand command) {
+    private void assertResendAllowed(SendOtpCommand command, VerificationPurpose purpose) {
         var cooldownStartedAt = Instant.now(clock).minus(RESEND_COOLDOWN);
         if (verificationEntityRepository.existsByPhoneNumberAndPurposeAndCreatedAtAfter(
                 command.phoneNumber(),
-                VerificationPurpose.REGISTRATION,
+                purpose,
                 cooldownStartedAt
         )) {
             throw new TooManyAttemptsException();
@@ -232,7 +204,7 @@ public class SmsApplicationService implements OtpFacade {
         var rateLimitStartedAt = Instant.now(clock).minus(otpRateLimitProperties.window());
         if (verificationEntityRepository.countByUserIdAndPurposeAndCreatedAtAfter(
                 command.userId(),
-                VerificationPurpose.REGISTRATION,
+                purpose,
                 rateLimitStartedAt
         ) >= otpRateLimitProperties.maxPerUser()) {
             throw new TooManyAttemptsException();
@@ -241,7 +213,7 @@ public class SmsApplicationService implements OtpFacade {
         var clientIp = normalizedClientIp(command.clientIp());
         if (clientIp != null && verificationEntityRepository.countByClientIpAndPurposeAndCreatedAtAfter(
                 clientIp,
-                VerificationPurpose.REGISTRATION,
+                purpose,
                 rateLimitStartedAt
         ) >= otpRateLimitProperties.maxPerIp()) {
             throw new TooManyAttemptsException();
@@ -252,26 +224,5 @@ public class SmsApplicationService implements OtpFacade {
         return phoneNumber.startsWith("+")
                 ? phoneNumber.substring(1)
                 : phoneNumber;
-    }
-
-    private String maskPhoneNumber(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            return "na";
-        }
-
-        var trimmed = phoneNumber.trim();
-        if (trimmed.length() <= 4) {
-            return "***";
-        }
-
-        return "***" + trimmed.substring(trimmed.length() - 4);
-    }
-
-    private String normalizedClientIp(String clientIp) {
-        if (clientIp == null || clientIp.isBlank()) {
-            return null;
-        }
-
-        return clientIp.trim();
     }
 }

@@ -7,11 +7,7 @@ import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 
 public interface OtpFacade {
 
-    VerificationView resendPhoneVerification(Long userId);
-
-    VerificationView resendPhoneVerification(Long userId, String clientIp);
-
-    VerificationView sendOtpCode(SendOtpCommand command);
+    VerificationView sendOtpCode(SendOtpCommand command, OtpPurpose purpose);
 
     VerificationResultView verifyOtpCode(VerifyOtpCommand command);
 }

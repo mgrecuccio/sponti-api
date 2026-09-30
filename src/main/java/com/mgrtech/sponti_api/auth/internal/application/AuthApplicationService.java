@@ -2,19 +2,26 @@ package com.mgrtech.sponti_api.auth.internal.application;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
+import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
+import com.mgrtech.sponti_api.sms.api.OtpFacade;
+import com.mgrtech.sponti_api.sms.api.OtpPurpose;
+import com.mgrtech.sponti_api.sms.api.command.VerifyOtpCommand;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
 import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
+import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
+import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
+import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
-import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.mgrtech.sponti_api.shared.utils.StringUtils.maskPhoneNumber;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164PhoneNumber;
 
 @Service
@@ -37,29 +45,35 @@ class AuthApplicationService implements AuthFacade {
     private final PasswordEncoder passwordEncoder;
     private final UserRegistrationFacade userRegistrationFacade;
     private final UserPasswordFacade userPasswordFacade;
+    private final UserVerificationFacade userVerificationFacade;
     private final UserCredentialsQuery userCredentialsQuery;
     private final RefreshTokenService refreshTokenService;
     private final JwtProperties jwtProperties;
     private final OperationalMetrics metrics;
+    private final OtpFacade otpFacade;
 
     AuthApplicationService(
             JwtTokenService jwtTokenService,
             PasswordEncoder passwordEncoder,
             UserRegistrationFacade userRegistrationFacade,
             UserPasswordFacade userPasswordFacade,
+            UserVerificationFacade userVerificationFacade,
             UserCredentialsQuery userCredentialsQuery,
             RefreshTokenService refreshTokenService,
             JwtProperties jwtProperties,
-            OperationalMetrics metrics
+            OperationalMetrics metrics,
+            OtpFacade otpFacade
     ) {
         this.jwtTokenService = jwtTokenService;
         this.passwordEncoder = passwordEncoder;
         this.userRegistrationFacade = userRegistrationFacade;
         this.userPasswordFacade = userPasswordFacade;
+        this.userVerificationFacade = userVerificationFacade;
         this.userCredentialsQuery = userCredentialsQuery;
         this.refreshTokenService = refreshTokenService;
         this.jwtProperties = jwtProperties;
         this.metrics = metrics;
+        this.otpFacade = otpFacade;
     }
 
     @Override
@@ -187,16 +201,20 @@ class AuthApplicationService implements AuthFacade {
         refreshTokenService.revokeAllForUser(user.id());
     }
 
-    private String maskPhoneNumber(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            return "na";
-        }
+    @Override
+    public VerificationResultView verifyRegistrationPhone(VerifyRegistrationPhoneCommand command) {
+        var user = userCredentialsQuery.findById(command.userId())
+                .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
 
-        var trimmed = phoneNumber.trim();
-        if (trimmed.length() <= 4) {
-            return "***";
-        }
+        var result = otpFacade.verifyOtpCode(new VerifyOtpCommand(
+                user.id(),
+                user.phoneNumber(),
+                command.verificationId(),
+                command.otpCode(),
+                OtpPurpose.REGISTRATION
+        ));
 
-        return "***" + trimmed.substring(trimmed.length() - 4);
+        userVerificationFacade.verify(new VerifyUserPhoneCommand(user.id()));
+        return result;
     }
 }
