@@ -29,8 +29,9 @@ public interface VerificationEntityRepository extends JpaRepository<Verification
             Instant createdAt
     );
 
-    Optional<VerificationEntity> findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+    Optional<VerificationEntity> findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
             String phoneNumber,
+            Long userId,
             VerificationPurpose purpose,
             VerificationStatus status
     );

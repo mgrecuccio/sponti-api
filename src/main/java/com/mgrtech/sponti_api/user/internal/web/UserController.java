@@ -2,6 +2,8 @@ package com.mgrtech.sponti_api.user.internal.web;
 
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
@@ -10,6 +12,7 @@ import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
+import com.mgrtech.sponti_api.user.internal.application.command.VerifyPhoneCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalTime;
 
 import static com.mgrtech.sponti_api.shared.utils.AuthenticationUtils.extractUserId;
+import static com.mgrtech.sponti_api.shared.utils.HttpRequestUtils.extractClientIp;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -57,6 +61,24 @@ public class UserController {
         return userFacade.getCurrentUserProfile(extractUserId(authentication));
     }
 
+    @PostMapping("/me/resend-phone-verification")
+    @Operation(summary = "Resend profile phone verification OTP")
+    VerificationView resendPhoneVerification(Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
+        return userFacade.resendPhoneVerification(extractUserId(authentication), extractClientIp(request));
+    }
+
+    @PostMapping("/me/verify-phone")
+    @Operation(summary = "Verify profile phone OTP")
+    VerificationResultView verifyPhone(
+            Authentication authentication,
+            @Valid @RequestBody VerifyPhoneRequest request
+    ) {
+        return userFacade.verifyPhone(extractUserId(authentication), new VerifyPhoneCommand(
+                request.verificationId(),
+                request.otpCode()
+        ));
+    }
+
     @PutMapping("/preferences")
     @Operation(summary = "Update the user preferences")
     UserMatchingPreferencesView updatePreferences(
@@ -87,6 +109,13 @@ public class UserController {
             @Schema(example = "New display name") @NotBlank String displayName,
             @Schema(example = "Europe/Brussels") @NotBlank String timezone,
             @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber
+    ) {
+    }
+
+    @Schema(description = "Verify phone OTP request payload")
+    record VerifyPhoneRequest(
+            @Schema(example = "123456") @NotBlank String otpCode,
+            @Schema(example = "7bf82f3b-8767-4695-8834-c001ce56facf", nullable = true) String verificationId
     ) {
     }
 

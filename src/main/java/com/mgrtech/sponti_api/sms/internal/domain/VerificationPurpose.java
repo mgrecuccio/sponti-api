@@ -1,5 +1,7 @@
 package com.mgrtech.sponti_api.sms.internal.domain;
 
 public enum VerificationPurpose {
-    REGISTRATION
+    REGISTRATION,
+    PROFILE_UPDATE,
+    PASSWORD_RECOVERY
 }

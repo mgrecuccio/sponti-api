@@ -3,12 +3,14 @@ package com.mgrtech.sponti_api.auth.internal.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
+import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -338,6 +340,33 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"));
+    }
+
+    @Test
+    void verify_registration_phone_delegates_for_authenticated_user() throws Exception {
+        var request = new AuthController.VerifyPhoneRequest(
+                "123456",
+                "verification-id"
+        );
+
+        given(authFacade.verifyRegistrationPhone(new VerifyRegistrationPhoneCommand(
+                42L,
+                request.verificationId(),
+                request.otpCode()
+        ))).willReturn(new VerificationResultView(42L, true));
+
+        mockMvc.perform(post("/api/v1/auth/verify-registration-phone")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verified").value(true));
+
+        verify(authFacade).verifyRegistrationPhone(new VerifyRegistrationPhoneCommand(
+                42L,
+                request.verificationId(),
+                request.otpCode()
+        ));
     }
 
 }

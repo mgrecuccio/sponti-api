@@ -2,10 +2,12 @@ package com.mgrtech.sponti_api.auth.internal.web;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
+import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -82,6 +84,20 @@ class AuthController {
         ));
     }
 
+    @PostMapping("/verify-registration-phone")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Verify registration phone OTP")
+    VerificationResultView verifyRegistrationPhone(
+            Authentication authentication,
+            @Valid @RequestBody VerifyPhoneRequest request
+    ) {
+        return authFacade.verifyRegistrationPhone(new VerifyRegistrationPhoneCommand(
+                extractUserId(authentication),
+                request.verificationId(),
+                request.otpCode()
+        ));
+    }
+
     @Schema(description = "Register request payload")
     record RegisterRequest(
             @Schema(example = "strongPassword") @NotBlank String password,
@@ -107,6 +123,13 @@ class AuthController {
     record ChangePasswordRequest(
             @Schema(example = "currentPassword") @NotBlank String currentPassword,
             @Schema(example = "newStrongPassword") @NotBlank String newPassword
+    ) {
+    }
+
+    @Schema(description = "Verify phone OTP request payload")
+    record VerifyPhoneRequest(
+            @Schema(example = "123456") @NotBlank String otpCode,
+            @Schema(example = "7bf82f3b-8767-4695-8834-c001ce56facf", nullable = true) String verificationId
     ) {
     }
 }

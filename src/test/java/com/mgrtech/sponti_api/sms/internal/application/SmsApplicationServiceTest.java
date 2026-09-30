@@ -3,6 +3,7 @@ package com.mgrtech.sponti_api.sms.internal.application;
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.shared.error.VerificationNotFoundException;
 import com.mgrtech.sponti_api.shared.error.ExpiredVerificationException;
+import com.mgrtech.sponti_api.sms.api.OtpPurpose;
 import com.mgrtech.sponti_api.sms.api.command.SendOtpCommand;
 import com.mgrtech.sponti_api.sms.api.command.VerifyOtpCommand;
 import com.mgrtech.sponti_api.sms.internal.domain.VerificationEntity;
@@ -11,10 +12,6 @@ import com.mgrtech.sponti_api.sms.internal.configuration.SmsProviderProperties;
 import com.mgrtech.sponti_api.sms.internal.domain.VerificationPurpose;
 import com.mgrtech.sponti_api.sms.internal.domain.VerificationStatus;
 import com.mgrtech.sponti_api.sms.internal.repository.VerificationEntityRepository;
-import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
-import com.mgrtech.sponti_api.user.api.query.UserContactInfoQuery;
-import com.mgrtech.sponti_api.user.api.query.UserProfileQuery;
-import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,32 +33,28 @@ class SmsApplicationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-09-26T08:00:00Z");
 
-    private final UserProfileQuery userProfileQuery = mock(UserProfileQuery.class);
-    private final UserContactInfoQuery userContactInfoQuery = mock(UserContactInfoQuery.class);
     private final RestClient restClient = mock(RestClient.class);
     private final VerificationEntityRepository verificationEntityRepository = mock(VerificationEntityRepository.class);
-    private final UserVerificationFacade userVerificationFacade = mock(UserVerificationFacade.class);
     private final SmsApplicationService service = new SmsApplicationService(
-            userProfileQuery,
-            userContactInfoQuery,
             restClient,
             new SmsProviderProperties("https://sms.example", "api-key", "Your code is {OTP}"),
             new OtpRateLimitProperties(Duration.ofHours(1), 5, 20),
             verificationEntityRepository,
-            userVerificationFacade,
             Clock.fixed(NOW, ZoneOffset.UTC)
     );
 
     @Test
     void sendOtpCodeRejectsWhenRegistrationOtpWasSentWithinCooldown() {
-        givenUserProfile();
         when(verificationEntityRepository.existsByPhoneNumberAndPurposeAndCreatedAtAfter(
                 eq("+32468009911"),
                 eq(VerificationPurpose.REGISTRATION),
                 any(Instant.class)
         )).thenReturn(true);
 
-        assertThatThrownBy(() -> service.sendOtpCode(new SendOtpCommand(42L, "+32468009911")))
+        assertThatThrownBy(() -> service.sendOtpCode(
+                new SendOtpCommand(42L, "+32468009911"),
+                OtpPurpose.REGISTRATION
+        ))
                 .isInstanceOf(TooManyAttemptsException.class);
 
         verify(verificationEntityRepository).existsByPhoneNumberAndPurposeAndCreatedAtAfter(
@@ -74,14 +67,16 @@ class SmsApplicationServiceTest {
 
     @Test
     void sendOtpCodeRejectsWhenUserReachedHourlyLimit() {
-        givenUserProfile();
         when(verificationEntityRepository.countByUserIdAndPurposeAndCreatedAtAfter(
                 eq(42L),
                 eq(VerificationPurpose.REGISTRATION),
                 any(Instant.class)
         )).thenReturn(5L);
 
-        assertThatThrownBy(() -> service.sendOtpCode(new SendOtpCommand(42L, "+32468009911", "203.0.113.10")))
+        assertThatThrownBy(() -> service.sendOtpCode(
+                new SendOtpCommand(42L, "+32468009911", "203.0.113.10"),
+                OtpPurpose.REGISTRATION
+        ))
                 .isInstanceOf(TooManyAttemptsException.class);
 
         verify(verificationEntityRepository).countByUserIdAndPurposeAndCreatedAtAfter(
@@ -94,14 +89,16 @@ class SmsApplicationServiceTest {
 
     @Test
     void sendOtpCodeRejectsWhenClientIpReachedHourlyLimit() {
-        givenUserProfile();
         when(verificationEntityRepository.countByClientIpAndPurposeAndCreatedAtAfter(
                 eq("203.0.113.10"),
                 eq(VerificationPurpose.REGISTRATION),
                 any(Instant.class)
         )).thenReturn(20L);
 
-        assertThatThrownBy(() -> service.sendOtpCode(new SendOtpCommand(42L, "+32468009911", "203.0.113.10")))
+        assertThatThrownBy(() -> service.sendOtpCode(
+                new SendOtpCommand(42L, "+32468009911", "203.0.113.10"),
+                OtpPurpose.REGISTRATION
+        ))
                 .isInstanceOf(TooManyAttemptsException.class);
 
         verify(verificationEntityRepository).countByClientIpAndPurposeAndCreatedAtAfter(
@@ -114,18 +111,25 @@ class SmsApplicationServiceTest {
 
     @Test
     void verifyOtpCodeWithoutVerificationIdUsesLatestPendingVerificationForUserPhoneNumber() {
-        givenUserProfile();
-        when(verificationEntityRepository.findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        when(verificationEntityRepository.findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         )).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(42L, null, "123456")))
+        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(
+                42L,
+                "+32468009911",
+                null,
+                "123456",
+                OtpPurpose.REGISTRATION
+        )))
                 .isInstanceOf(VerificationNotFoundException.class);
 
-        verify(verificationEntityRepository).findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        verify(verificationEntityRepository).findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         );
@@ -134,23 +138,30 @@ class SmsApplicationServiceTest {
 
     @Test
     void verifyOtpCodeWithUnknownVerificationIdFallsBackToLatestPendingVerificationForUserPhoneNumber() {
-        givenUserProfile();
         var verificationId = UUID.randomUUID();
         var expiredVerification = expiredVerification();
 
         when(verificationEntityRepository.findById(verificationId)).thenReturn(Optional.empty());
-        when(verificationEntityRepository.findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        when(verificationEntityRepository.findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         )).thenReturn(Optional.of(expiredVerification));
 
-        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(42L, verificationId.toString(), "123456")))
+        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(
+                42L,
+                "+32468009911",
+                verificationId.toString(),
+                "123456",
+                OtpPurpose.REGISTRATION
+        )))
                 .isInstanceOf(ExpiredVerificationException.class);
 
         verify(verificationEntityRepository).findById(verificationId);
-        verify(verificationEntityRepository).findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        verify(verificationEntityRepository).findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         );
@@ -159,35 +170,31 @@ class SmsApplicationServiceTest {
 
     @Test
     void verifyOtpCodeWithNonBackendVerificationIdFallsBackToLatestPendingVerificationForUserPhoneNumber() {
-        givenUserProfile();
         var expiredVerification = expiredVerification();
 
-        when(verificationEntityRepository.findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        when(verificationEntityRepository.findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         )).thenReturn(Optional.of(expiredVerification));
 
-        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(42L, "pending-verification-id", "123456")))
+        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(
+                42L,
+                "+32468009911",
+                "pending-verification-id",
+                "123456",
+                OtpPurpose.REGISTRATION
+        )))
                 .isInstanceOf(ExpiredVerificationException.class);
 
-        verify(verificationEntityRepository).findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+        verify(verificationEntityRepository).findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                 "+32468009911",
+                42L,
                 VerificationPurpose.REGISTRATION,
                 VerificationStatus.PENDING
         );
         verifyNoInteractions(restClient);
-    }
-
-    private void givenUserProfile() {
-        when(userProfileQuery.getProfileById(42L))
-                .thenReturn(Optional.of(new UserProfileView(
-                        42L,
-                        "+32468009911",
-                        "John",
-                        "ACTIVE",
-                        "Europe/Brussels"
-                )));
     }
 
     private VerificationEntity expiredVerification() {

@@ -25,4 +25,25 @@ public class StringUtils {
             throw new IllegalArgumentException("Phone number must be valid E.164 number", e);
         }
     }
+
+    public static String maskPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return "na";
+        }
+
+        var trimmed = phoneNumber.trim();
+        if (trimmed.length() <= 4) {
+            return "***";
+        }
+
+        return "***" + trimmed.substring(trimmed.length() - 4);
+    }
+
+    public static String normalizedClientIp(String clientIp) {
+        if (clientIp == null || clientIp.isBlank()) {
+            return null;
+        }
+
+        return clientIp.trim();
+    }
 }

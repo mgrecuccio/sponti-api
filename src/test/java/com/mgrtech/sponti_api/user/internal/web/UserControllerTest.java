@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.query.UserMatchingPreferencesQuery;
@@ -13,6 +15,7 @@ import com.mgrtech.sponti_api.user.api.view.UserPrivateProfileView;
 import com.mgrtech.sponti_api.user.api.view.UserProfileView;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import com.mgrtech.sponti_api.user.internal.application.UserPreferenceFacade;
+import com.mgrtech.sponti_api.user.internal.application.command.VerifyPhoneCommand;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -26,8 +29,10 @@ import java.time.LocalTime;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -236,5 +241,44 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resend_phone_verification_delegates_for_authenticated_user() throws Exception {
+        given(userFacade.resendPhoneVerification(42L, "203.0.113.10"))
+                .willReturn(new VerificationView("verification-id"));
+
+        mockMvc.perform(post("/api/v1/users/me/resend-phone-verification")
+                        .header("X-Forwarded-For", "203.0.113.10, 10.0.0.1")
+                        .principal(new TestingAuthenticationToken("42", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationId").value("verification-id"));
+
+        verify(userFacade).resendPhoneVerification(42L, "203.0.113.10");
+    }
+
+    @Test
+    void verify_phone_delegates_for_authenticated_user() throws Exception {
+        var request = new UserController.VerifyPhoneRequest(
+                "123456",
+                "verification-id"
+        );
+
+        given(userFacade.verifyPhone(42L, new VerifyPhoneCommand(
+                request.verificationId(),
+                request.otpCode()
+        ))).willReturn(new VerificationResultView(42L, true));
+
+        mockMvc.perform(post("/api/v1/users/me/verify-phone")
+                        .principal(new TestingAuthenticationToken("42", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verified").value(true));
+
+        verify(userFacade).verifyPhone(42L, new VerifyPhoneCommand(
+                request.verificationId(),
+                request.otpCode()
+        ));
     }
 }

@@ -1,6 +1,8 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
+import com.mgrtech.sponti_api.FakeSmsBoxInitializer;
+import com.mgrtech.sponti_api.FixedClockTestConfiguration;
 import com.mgrtech.sponti_api.ModuleIntegrationTest;
 import com.mgrtech.sponti_api.shared.error.PhoneNumberAlreadyUsedException;
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
@@ -19,6 +21,9 @@ import com.mgrtech.sponti_api.user.internal.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
+import org.springframework.modulith.test.ApplicationModuleTest;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -26,7 +31,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ModuleIntegrationTest
+@ModuleIntegrationTest(mode = ApplicationModuleTest.BootstrapMode.DIRECT_DEPENDENCIES)
+@ContextConfiguration(initializers = FakeSmsBoxInitializer.class)
+@Import(FixedClockTestConfiguration.class)
 class UserApplicationServiceIntegrationTest {
 
     @Autowired

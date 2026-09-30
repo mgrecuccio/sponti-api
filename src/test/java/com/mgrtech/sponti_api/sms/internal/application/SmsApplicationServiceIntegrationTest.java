@@ -51,9 +51,10 @@ class SmsApplicationServiceIntegrationTest {
         ));
 
         var verification = verificationEntityRepository
-                .findFirstByPhoneNumberAndPurposeAndStatusOrderByCreatedAtDesc(
+                .findFirstByPhoneNumberAndUserIdAndPurposeAndStatusOrderByCreatedAtDesc(
                         "+32468009912",
-                        VerificationPurpose.REGISTRATION,
+                        created.id(),
+                        VerificationPurpose.PROFILE_UPDATE,
                         VerificationStatus.PENDING
                 );
 

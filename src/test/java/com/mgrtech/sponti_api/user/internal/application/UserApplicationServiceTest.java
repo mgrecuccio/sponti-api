@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
+import com.mgrtech.sponti_api.sms.api.OtpFacade;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
@@ -29,10 +30,12 @@ class UserApplicationServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final UserPreferenceRepository userPreferenceRepository = mock(UserPreferenceRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    private final OtpFacade otpFacade = mock(OtpFacade.class);
     private final UserApplicationService service = new UserApplicationService(
             userRepository,
             userPreferenceRepository,
-            eventPublisher
+            eventPublisher,
+            otpFacade
     );
 
     @Test
