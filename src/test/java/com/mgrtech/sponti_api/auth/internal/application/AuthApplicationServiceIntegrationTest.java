@@ -5,7 +5,9 @@ import com.mgrtech.sponti_api.FullIntegrationTest;
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.api.command.RecoverPasswordCommand;
 import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.VerifyRecoveryPasswordCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
@@ -204,6 +206,46 @@ class AuthApplicationServiceIntegrationTest {
 
         assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void recover_password_allows_login_with_new_password_and_revokes_refresh_tokens() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+
+        var verification = authFacade.recoverPassword(
+                new RecoverPasswordCommand("+32468009911", "127.0.0.1")
+        );
+
+        authFacade.verifyPasswordRecovery(new VerifyRecoveryPasswordCommand(
+                "+32468009911",
+                verification.verificationId(),
+                "123456",
+                "new-password"
+        ));
+
+        assertThatThrownBy(() -> authFacade.login(
+                new LoginCommand("+32468009911", "password")
+        )).isInstanceOf(BadCredentialsException.class);
+
+        var result = authFacade.login(
+                new LoginCommand("+32468009911", "new-password")
+        );
+
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(result.refreshToken()).isNotBlank();
+        assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void recover_password_does_not_reveal_unknown_phone_numbers() {
+        var verification = authFacade.recoverPassword(
+                new RecoverPasswordCommand("+32468009912", "127.0.0.1")
+        );
+
+        assertThat(verification.verificationId()).isNull();
     }
 
     private static @NonNull RegisterCommand getRegistrationCommand() {

@@ -2,19 +2,19 @@ package com.mgrtech.sponti_api.auth.internal.application;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
+import com.mgrtech.sponti_api.auth.api.command.*;
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.UserNotFoundException;
+import com.mgrtech.sponti_api.shared.error.VerificationNotFoundException;
 import com.mgrtech.sponti_api.shared.observability.OperationalMetrics;
 import com.mgrtech.sponti_api.sms.api.OtpFacade;
 import com.mgrtech.sponti_api.sms.api.OtpPurpose;
+import com.mgrtech.sponti_api.sms.api.command.SendOtpCommand;
 import com.mgrtech.sponti_api.sms.api.command.VerifyOtpCommand;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
@@ -22,6 +22,7 @@ import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
 import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +36,7 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164Phone
 
 @Service
 @Transactional
+@AllArgsConstructor
 class AuthApplicationService implements AuthFacade {
 
     private static final Logger log = LoggerFactory.getLogger(AuthApplicationService.class);
@@ -51,30 +53,6 @@ class AuthApplicationService implements AuthFacade {
     private final JwtProperties jwtProperties;
     private final OperationalMetrics metrics;
     private final OtpFacade otpFacade;
-
-    AuthApplicationService(
-            JwtTokenService jwtTokenService,
-            PasswordEncoder passwordEncoder,
-            UserRegistrationFacade userRegistrationFacade,
-            UserPasswordFacade userPasswordFacade,
-            UserVerificationFacade userVerificationFacade,
-            UserCredentialsQuery userCredentialsQuery,
-            RefreshTokenService refreshTokenService,
-            JwtProperties jwtProperties,
-            OperationalMetrics metrics,
-            OtpFacade otpFacade
-    ) {
-        this.jwtTokenService = jwtTokenService;
-        this.passwordEncoder = passwordEncoder;
-        this.userRegistrationFacade = userRegistrationFacade;
-        this.userPasswordFacade = userPasswordFacade;
-        this.userVerificationFacade = userVerificationFacade;
-        this.userCredentialsQuery = userCredentialsQuery;
-        this.refreshTokenService = refreshTokenService;
-        this.jwtProperties = jwtProperties;
-        this.metrics = metrics;
-        this.otpFacade = otpFacade;
-    }
 
     @Override
     public AuthTokens register(RegisterCommand command) {
@@ -216,5 +194,58 @@ class AuthApplicationService implements AuthFacade {
 
         userVerificationFacade.verify(new VerifyUserPhoneCommand(user.id()));
         return result;
+    }
+
+    @Override
+    public VerificationView recoverPassword(RecoverPasswordCommand command) {
+        var normalizedPhoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
+        var maskedPhoneNumber = maskPhoneNumber(normalizedPhoneNumber);
+        log.info("Recovery requested: phoneNumber={}", maskedPhoneNumber);
+        var user = userCredentialsQuery.findByPhoneNumber(normalizedPhoneNumber);
+
+        if (user.isEmpty()) {
+            log.info("Recovery requested for unknown phoneNumber={}", maskedPhoneNumber);
+            return new VerificationView(null);
+        }
+
+        var verificationView = otpFacade.sendOtpCode(
+                new SendOtpCommand(user.get().id(), user.get().phoneNumber(), command.clientIp()),
+                OtpPurpose.PASSWORD_RECOVERY
+        );
+        log.info("Recovery password: OTP code send for phoneNumber={}", maskedPhoneNumber);
+        return verificationView;
+    }
+
+    @Override
+    public void verifyPasswordRecovery(VerifyRecoveryPasswordCommand command) {
+        var phoneNumber = normalizeE164PhoneNumber(command.phoneNumber());
+        var maskedPhoneNumber = maskPhoneNumber(phoneNumber);
+        var verificationId = command.verificationId();
+        var otpCode = command.otpCode();
+        log.info("Verifying phoneNumber={}, verificationId={}", maskedPhoneNumber, verificationId);
+
+        var user = userCredentialsQuery.findByPhoneNumber(phoneNumber)
+                .orElseThrow(VerificationNotFoundException::new);
+
+        var verificationResult = otpFacade.verifyOtpCode(new VerifyOtpCommand(
+                user.id(),
+                phoneNumber,
+                verificationId,
+                otpCode,
+                OtpPurpose.PASSWORD_RECOVERY
+        ));
+
+        if(verificationResult.verified()) {
+            userPasswordFacade.updatePassword(new UpdateUserPasswordCommand(
+                    user.id(),
+                    passwordEncoder.encode(command.newPassword())
+            ));
+            log.info("Password has been reset for phoneNumber={}, verificationId={}",
+                    maskedPhoneNumber, verificationId);
+            refreshTokenService.revokeAllForUser(user.id());
+            return;
+        }
+        log.info("Password not reset for phoneNumber={}, verificationId={}. Token verified=false",
+                maskedPhoneNumber, verificationId);
     }
 }

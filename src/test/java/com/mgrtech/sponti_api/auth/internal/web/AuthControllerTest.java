@@ -5,12 +5,15 @@ import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
 import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
 import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.api.command.RecoverPasswordCommand;
 import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.api.command.VerifyRecoveryPasswordCommand;
 import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -340,6 +343,77 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"));
+    }
+
+    @Test
+    void recover_password_sends_recovery_otp() throws Exception {
+        var request = new AuthController.PasswordRecoveryRequest("+32468009911");
+
+        given(authFacade.recoverPassword(new RecoverPasswordCommand(
+                request.phoneNumber(),
+                "203.0.113.10"
+        ))).willReturn(new VerificationView("verification-id"));
+
+        mockMvc.perform(post("/api/v1/auth/password-recovery")
+                        .header("X-Forwarded-For", "203.0.113.10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationId").value("verification-id"));
+
+        verify(authFacade).recoverPassword(new RecoverPasswordCommand(
+                request.phoneNumber(),
+                "203.0.113.10"
+        ));
+    }
+
+    @Test
+    void recover_password_returns_bad_request_if_request_is_invalid() throws Exception {
+        var request = new AuthController.PasswordRecoveryRequest("+3246");
+
+        mockMvc.perform(post("/api/v1/auth/password-recovery")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void verify_password_recovery_resets_password() throws Exception {
+        var request = new AuthController.PasswordRecoveryVerificationRequest(
+                "+32468009911",
+                "verification-id",
+                "123456",
+                "new-password"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/verify-password-recovery")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent());
+
+        verify(authFacade).verifyPasswordRecovery(new VerifyRecoveryPasswordCommand(
+                request.phoneNumber(),
+                request.verificationId(),
+                request.otpCode(),
+                request.newPassword()
+        ));
+    }
+
+    @Test
+    void verify_password_recovery_returns_bad_request_if_request_is_invalid() throws Exception {
+        var request = new AuthController.PasswordRecoveryVerificationRequest(
+                "+32468009911",
+                "verification-id",
+                "",
+                "new-password"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/verify-password-recovery")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
