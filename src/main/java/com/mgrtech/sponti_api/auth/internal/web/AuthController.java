@@ -2,12 +2,10 @@ package com.mgrtech.sponti_api.auth.internal.web;
 
 import com.mgrtech.sponti_api.auth.api.AuthFacade;
 import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
+import com.mgrtech.sponti_api.auth.api.command.*;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -84,6 +82,31 @@ class AuthController {
         ));
     }
 
+    @PostMapping("/password-recovery")
+    @SecurityRequirements
+    @Operation(summary = "Password recovery")
+    VerificationView recoverPassword(HttpServletRequest servletRequest, @Valid @RequestBody PasswordRecoveryRequest request) {
+        return authFacade.recoverPassword(new RecoverPasswordCommand(
+                request.phoneNumber(),
+                extractClientIp(servletRequest)
+        ));
+    }
+
+    @PostMapping("/verify-password-recovery")
+    @SecurityRequirements
+    @Operation(summary = "Verify password recovery OTP")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void verifyPasswordRecoveryCode(@Valid @RequestBody PasswordRecoveryVerificationRequest request) {
+         authFacade.verifyPasswordRecovery(
+                new VerifyRecoveryPasswordCommand(
+                        request.phoneNumber(),
+                        request.verificationId(),
+                        request.otpCode(),
+                        request.newPassword()
+                )
+        );
+    }
+
     @PostMapping("/verify-registration-phone")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Verify registration phone OTP")
@@ -111,6 +134,19 @@ class AuthController {
     record LoginRequest(
             @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber,
             @Schema(example = "strongPassword") @NotBlank String password) {
+    }
+
+    @Schema(description = "Password Recovery request payload")
+    record PasswordRecoveryRequest(
+            @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber){
+    }
+
+    @Schema(description = "Password Recovery Verification request payload")
+    record PasswordRecoveryVerificationRequest(
+            @Schema(example = "+32468009911") @NotBlank @ValidE164PhoneNumber String phoneNumber,
+            @Schema(example = "7bf82f3b-8767-4695-8834-c001ce56facf", nullable = true) String verificationId,
+            @Schema(example = "123456") @NotBlank String otpCode,
+            @Schema(example = "strongPassword") @NotBlank String newPassword){
     }
 
     @Schema(description = "Refresh token request payload")

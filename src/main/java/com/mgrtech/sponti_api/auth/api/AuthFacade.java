@@ -1,10 +1,8 @@
 package com.mgrtech.sponti_api.auth.api;
 
-import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
+import com.mgrtech.sponti_api.auth.api.command.*;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
+import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 
 public interface AuthFacade {
 
@@ -19,4 +17,8 @@ public interface AuthFacade {
     void logout(Long userId);
 
     VerificationResultView verifyRegistrationPhone(VerifyRegistrationPhoneCommand command);
+
+    VerificationView recoverPassword(RecoverPasswordCommand command);
+
+    void verifyPasswordRecovery(VerifyRecoveryPasswordCommand command);
 }
