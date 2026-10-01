@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -20,14 +21,16 @@ public class JwtTokenService {
 
     private final JwtProperties properties;
     private final SecretKey secretKey;
+    private final Clock clock;
 
-    public JwtTokenService(JwtProperties properties) {
+    public JwtTokenService(JwtProperties properties, Clock clock) {
         this.properties = properties;
         this.secretKey = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
+        this.clock = clock;
     }
 
     public String issueAccessToken(Long userId, String phoneNumber, Collection<String> roles) {
-        var now = Instant.now();
+        var now = Instant.now(clock);
         var expiresAt = now.plus(properties.accessTokenMinutes(), ChronoUnit.MINUTES);
 
         return Jwts.builder()
@@ -48,7 +51,7 @@ public class JwtTokenService {
             var claims = parse(token).getPayload();
             return "access".equals(claims.get("typ", String.class))
                     && claims.getExpiration() != null
-                    && claims.getExpiration().after(new Date())
+                    && claims.getExpiration().after(Date.from(Instant.now(clock)))
                     && properties.issuer().equals(claims.getIssuer());
         } catch (Exception e) {
             return false;
@@ -70,6 +73,7 @@ public class JwtTokenService {
     private Jws<Claims> parse(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
+                .clock(() -> Date.from(Instant.now(clock)))
                 .build()
                 .parseSignedClaims(token);
     }

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Component
@@ -12,10 +13,15 @@ import java.time.Instant;
 class NoOpPushNotificationSender implements PushNotificationSender {
 
     private static final Logger log = LoggerFactory.getLogger(NoOpPushNotificationSender.class);
+    private final Clock clock;
+
+    NoOpPushNotificationSender(Clock clock) {
+        this.clock = clock;
+    }
 
     @Override
     public PushDeliveryResult send(PushMessage message) {
         log.info("No-op push notification: token={} type={} title={}", message.token(), message.type(), message.title());
-        return PushDeliveryResult.success("noop:" + Instant.now());
+        return PushDeliveryResult.success("noop:" + Instant.now(clock));
     }
 }

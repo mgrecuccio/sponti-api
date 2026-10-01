@@ -15,10 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
-import java.util.List;
 
 @Service
 public class RefreshTokenService {
@@ -29,16 +29,19 @@ public class RefreshTokenService {
     private final JwtProperties properties;
     private final OperationalMetrics metrics;
     private final SecureRandom secureRandom;
+    private final Clock clock;
 
     public RefreshTokenService(
             RefreshTokenRepository repository,
             JwtProperties properties,
-            OperationalMetrics metrics
+            OperationalMetrics metrics,
+            Clock clock
     ) {
         this.repository = repository;
         this.properties = properties;
         this.metrics = metrics;
         this.secureRandom = new SecureRandom();
+        this.clock = clock;
     }
 
     @Transactional
@@ -46,7 +49,7 @@ public class RefreshTokenService {
         var rawToken = generate();
         var hash = hash(rawToken);
 
-        var now = Instant.now();
+        var now = Instant.now(clock);
         var expires = now.plus(properties.refreshTokenDays(), ChronoUnit.DAYS);
         repository.save(new RefreshToken(userId, hash, now, expires));
 
@@ -55,7 +58,7 @@ public class RefreshTokenService {
 
     public RotateToken rotate(String presentedToken) {
         var hash = hash(presentedToken);
-        var now = Instant.now();
+        var now = Instant.now(clock);
 
         var existing = repository.findByTokenHash(hash)
                 .orElseThrow(() -> {
@@ -89,7 +92,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void revokeAllForUser(Long userId) {
-        var now = Instant.now();
+        var now = Instant.now(clock);
         var tokens = repository.findAllByUserId(userId);
         for (RefreshToken token : tokens) {
             if (token.isActive(now)) {

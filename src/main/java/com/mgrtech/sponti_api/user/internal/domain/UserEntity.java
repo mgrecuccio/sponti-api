@@ -89,10 +89,10 @@ public class UserEntity {
         this.phoneNumberChangedAt = changedAt;
     }
 
-    public void verify() {
+    public void verify(Instant verifiedAt) {
         this.phoneNumberVerified = true;
         this.whatsAppOptIn = true;
-        this.phoneNumberVerifiedAt = Instant.now();
+        this.phoneNumberVerifiedAt = verifiedAt;
     }
 
     public static UserCredentialsView toCredentialsView(UserEntity user) {

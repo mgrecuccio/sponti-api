@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -22,11 +24,15 @@ import static org.mockito.Mockito.*;
 
 class RefreshTokenServiceTest {
 
+    private static final Instant NOW = Instant.parse("2026-01-01T12:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
+
     private final RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
     private final RefreshTokenService service = new RefreshTokenService(
             repository,
             new JwtProperties("01234567890123456789012345678901", "sponti-test", 15, 30),
-            new OperationalMetrics(new SimpleMeterRegistry())
+            new OperationalMetrics(new SimpleMeterRegistry()),
+            CLOCK
     );
 
     @Test
@@ -42,8 +48,8 @@ class RefreshTokenServiceTest {
 
     @Test
     void rotate_throws_revoked_refresh_token_when_token_was_revoked() {
-        var token = new RefreshToken(1L, hash("revoked-token"), Instant.now(), Instant.now().plusSeconds(3600));
-        token.revoke(Instant.now(), null);
+        var token = new RefreshToken(1L, hash("revoked-token"), NOW, NOW.plusSeconds(3600));
+        token.revoke(NOW, null);
         when(repository.findByTokenHash(hash("revoked-token"))).thenReturn(Optional.of(token));
 
         assertThatThrownBy(() -> service.rotate("revoked-token"))
@@ -55,7 +61,7 @@ class RefreshTokenServiceTest {
 
     @Test
     void rotate_throws_expired_refresh_token_when_token_is_expired() {
-        var token = new RefreshToken(1L, hash("expired-token"), Instant.now().minusSeconds(7200), Instant.now().minusSeconds(3600));
+        var token = new RefreshToken(1L, hash("expired-token"), NOW.minusSeconds(7200), NOW.minusSeconds(3600));
         when(repository.findByTokenHash(hash("expired-token"))).thenReturn(Optional.of(token));
 
         assertThatThrownBy(() -> service.rotate("expired-token"))

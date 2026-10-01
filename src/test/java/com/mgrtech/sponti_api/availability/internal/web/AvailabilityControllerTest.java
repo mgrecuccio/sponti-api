@@ -233,7 +233,7 @@ class AvailabilityControllerTest {
                     "test",
                     15,
                     7
-            ));
+            ), java.time.Clock.systemUTC());
         }
     }
 

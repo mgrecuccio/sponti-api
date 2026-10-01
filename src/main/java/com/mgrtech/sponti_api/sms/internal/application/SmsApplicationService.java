@@ -113,7 +113,7 @@ public class SmsApplicationService implements OtpFacade {
 
         VerificationEntity verification = resolveVerification(command, command.phoneNumber(), purpose);
 
-        if (verification.isExpired()) {
+        if (verification.isExpired(Instant.now(clock))) {
             throw new ExpiredVerificationException();
         }
 
