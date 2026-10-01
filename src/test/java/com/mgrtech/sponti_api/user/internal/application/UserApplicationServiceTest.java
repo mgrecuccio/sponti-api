@@ -16,7 +16,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
@@ -27,6 +29,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserApplicationServiceTest {
 
+    private static final Instant NOW = Instant.parse("2026-01-01T12:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
+
     private final UserRepository userRepository = mock(UserRepository.class);
     private final UserPreferenceRepository userPreferenceRepository = mock(UserPreferenceRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
@@ -35,6 +40,7 @@ class UserApplicationServiceTest {
             userRepository,
             userPreferenceRepository,
             eventPublisher,
+            CLOCK,
             otpFacade
     );
 
@@ -63,7 +69,7 @@ class UserApplicationServiceTest {
     @Test
     void updateProfilePublishesPhoneNumberChangedEventWhenPhoneNumberChanges() {
         var user = new UserEntity("hash", "John", "+32468009911", "UTC");
-        user.verify();
+        user.verify(NOW);
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.existsByPhoneNumberAndIdNot("+32468009912", 42L)).thenReturn(false);
 
@@ -87,7 +93,7 @@ class UserApplicationServiceTest {
     @Test
     void updateProfileDoesNotPublishPhoneNumberChangedEventWhenPhoneNumberIsUnchanged() {
         var user = new UserEntity("hash", "John", "+32468009911", "UTC");
-        user.verify();
+        user.verify(NOW);
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.existsByPhoneNumberAndIdNot("+32468009911", 42L)).thenReturn(false);
 
@@ -107,7 +113,7 @@ class UserApplicationServiceTest {
     @Test
     void updateProfileAllowsKeepingSamePhoneNumberWithinOneDay() {
         var user = new UserEntity("hash", "John", "+32468009911", "UTC");
-        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(1, ChronoUnit.HOURS));
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", NOW.minus(1, ChronoUnit.HOURS));
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.existsByPhoneNumberAndIdNot("+32468009911", 42L)).thenReturn(false);
 
@@ -126,7 +132,7 @@ class UserApplicationServiceTest {
     @Test
     void updateProfileRejectsPhoneNumberChangeWithinOneDay() {
         var user = new UserEntity("hash", "John", "+32468009911", "UTC");
-        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(23, ChronoUnit.HOURS));
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", NOW.minus(23, ChronoUnit.HOURS));
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.existsByPhoneNumberAndIdNot("+32468009912", 42L)).thenReturn(false);
 
@@ -143,7 +149,7 @@ class UserApplicationServiceTest {
     @Test
     void updateProfileAllowsPhoneNumberChangeAfterOneDay() {
         var user = new UserEntity("hash", "John", "+32468009911", "UTC");
-        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", Instant.now().minus(25, ChronoUnit.HOURS));
+        ReflectionTestUtils.setField(user, "phoneNumberChangedAt", NOW.minus(25, ChronoUnit.HOURS));
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.existsByPhoneNumberAndIdNot("+32468009912", 42L)).thenReturn(false);
 

@@ -34,6 +34,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -68,6 +69,7 @@ public class UserApplicationService implements
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
     private final OtpFacade otpFacade;
 
     @Override
@@ -232,7 +234,7 @@ public class UserApplicationService implements
 
         var phoneNumberChanged = !phoneNumber.equals(user.getPhoneNumber());
         if(phoneNumberChanged) {
-            var phoneNumberChangedAt = Instant.now();
+            var phoneNumberChangedAt = Instant.now(clock);
             assertPhoneNumberChangeAllowed(user, phoneNumberChangedAt);
             log.info("Phone number changed for userId={}. Resetting verification.", userId);
             user.resetVerification();
@@ -298,7 +300,7 @@ public class UserApplicationService implements
         var user = userRepository.findById(userid)
                 .orElseThrow(() -> new UserNotFoundException("impossible to verify the user: user not found."));
 
-        user.verify();
+        user.verify(Instant.now(clock));
         log.info("Phone number for userid={} verified", userid);
     }
 }
