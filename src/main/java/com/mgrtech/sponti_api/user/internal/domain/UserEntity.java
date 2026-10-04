@@ -19,7 +19,7 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "phone_number", nullable = false, unique = true, length = 16)
+    @Column(name = "phone_number", unique = true, length = 16)
     private String phoneNumber;
 
     @Column(name = "phone_number_verified", nullable = false)
@@ -46,6 +46,9 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -95,12 +98,39 @@ public class UserEntity {
         this.phoneNumberVerifiedAt = verifiedAt;
     }
 
+    public void resetVerification() {
+        this.phoneNumberVerified = false;
+        this.whatsAppOptIn = false;
+        this.phoneNumberVerifiedAt = null;
+    }
+
+    public void requestDeletion() {
+        if (status == UserStatus.DELETED || status == UserStatus.DELETION_REQUESTED || status == UserStatus.DELETING) {
+            return;
+        }
+        this.status = UserStatus.DELETION_REQUESTED;
+    }
+
     public static UserCredentialsView toCredentialsView(UserEntity user) {
         return new UserCredentialsView(
                 user.getId(),
+                user.getStatusAsString(),
                 user.getPhoneNumber(),
                 user.getPasswordHash()
         );
+    }
+
+    public void anonymizeForDeletion(Instant deletedAt) {
+        this.phoneNumber = null;
+        this.displayName = "Deleted user";
+        this.passwordHash = "";
+        this.timezone = null;
+        this.phoneNumberVerified = false;
+        this.whatsAppOptIn = false;
+        this.phoneNumberVerifiedAt = null;
+        this.phoneNumberChangedAt = null;
+        this.status = UserStatus.DELETED;
+        this.deletedAt = deletedAt;
     }
 
     public static UserProfileView toProfileView(UserEntity user) {
@@ -140,9 +170,11 @@ public class UserEntity {
         );
     }
 
-    public void resetVerification() {
-        this.phoneNumberVerified = false;
-        this.whatsAppOptIn = false;
-        this.phoneNumberVerifiedAt = null;
+    public boolean isDeleted() {
+        return UserStatus.DELETED == status;
+    }
+
+    public boolean isDeletionRequested() {
+        return UserStatus.DELETION_REQUESTED == status;
     }
 }

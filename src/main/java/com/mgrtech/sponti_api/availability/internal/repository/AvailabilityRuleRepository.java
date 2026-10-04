@@ -13,4 +13,6 @@ public interface AvailabilityRuleRepository extends JpaRepository<AvailabilityRu
     List<AvailabilityRuleEntity> findByUserIdAndEnabledTrue(Long userId);
 
     Optional<AvailabilityRuleEntity> findByIdAndUserId(Long id, Long userId);
+
+    void deleteByUserId(Long userId);
 }

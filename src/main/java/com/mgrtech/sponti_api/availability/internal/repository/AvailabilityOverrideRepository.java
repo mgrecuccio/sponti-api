@@ -26,4 +26,7 @@ public interface AvailabilityOverrideRepository extends JpaRepository<Availabili
             Instant rangeEndExclusive,
             Instant rangeStartExclusive
     );
+
+    void deleteByUserId(Long userId);
+
 }

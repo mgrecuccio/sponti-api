@@ -7,7 +7,7 @@ import com.mgrtech.sponti_api.notification.internal.delivery.PushDeliveryResult;
 import com.mgrtech.sponti_api.notification.internal.delivery.PushFailureType;
 import com.mgrtech.sponti_api.notification.internal.delivery.PushMessage;
 import com.mgrtech.sponti_api.notification.internal.delivery.PushNotificationSender;
-import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
+import com.mgrtech.sponti_api.notification.api.DevicePlatform;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeliveryStatus;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationDeviceTokenEntity;
 import com.mgrtech.sponti_api.notification.internal.domain.NotificationHistoryEntity;

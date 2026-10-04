@@ -1,6 +1,7 @@
 package com.mgrtech.sponti_api.sms.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
+import com.mgrtech.sponti_api.shared.error.InvalidVerificationCodeException;
 import com.mgrtech.sponti_api.shared.error.VerificationNotFoundException;
 import com.mgrtech.sponti_api.shared.error.ExpiredVerificationException;
 import com.mgrtech.sponti_api.sms.api.OtpPurpose;
@@ -15,6 +16,7 @@ import com.mgrtech.sponti_api.sms.internal.repository.VerificationEntityReposito
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
 import java.time.Clock;
@@ -24,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -42,6 +45,69 @@ class SmsApplicationServiceTest {
             verificationEntityRepository,
             Clock.fixed(NOW, ZoneOffset.UTC)
     );
+
+    @Test
+    void sendOtpCodeSkipsProviderWhenSmsSendingIsDisabled() {
+        var service = serviceWithSkippedSmsSending();
+        var verificationId = UUID.randomUUID();
+
+        when(verificationEntityRepository.save(any(VerificationEntity.class))).thenAnswer(invocation -> {
+            VerificationEntity verification = invocation.getArgument(0);
+            ReflectionTestUtils.setField(verification, "id", verificationId);
+            return verification;
+        });
+
+        var result = service.sendOtpCode(
+                new SendOtpCommand(42L, "+32468009911", "203.0.113.10"),
+                OtpPurpose.REGISTRATION
+        );
+
+        assertThat(result.verificationId()).isEqualTo(verificationId.toString());
+        verify(verificationEntityRepository).save(any(VerificationEntity.class));
+        verifyNoInteractions(restClient);
+    }
+
+    @Test
+    void verifyOtpCodeAcceptsDevCodeWhenSmsSendingIsDisabled() {
+        var service = serviceWithSkippedSmsSending();
+        var verificationId = UUID.randomUUID();
+        var verification = pendingVerification();
+
+        when(verificationEntityRepository.findById(verificationId)).thenReturn(Optional.of(verification));
+
+        var result = service.verifyOtpCode(new VerifyOtpCommand(
+                42L,
+                "+32468009911",
+                verificationId.toString(),
+                "000000",
+                OtpPurpose.REGISTRATION
+        ));
+
+        assertThat(result.verified()).isTrue();
+        assertThat(verification.isVerified()).isTrue();
+        verifyNoInteractions(restClient);
+    }
+
+    @Test
+    void verifyOtpCodeRejectsUnexpectedDevCodeWhenSmsSendingIsDisabled() {
+        var service = serviceWithSkippedSmsSending();
+        var verificationId = UUID.randomUUID();
+        var verification = pendingVerification();
+
+        when(verificationEntityRepository.findById(verificationId)).thenReturn(Optional.of(verification));
+
+        assertThatThrownBy(() -> service.verifyOtpCode(new VerifyOtpCommand(
+                42L,
+                "+32468009911",
+                verificationId.toString(),
+                "123456",
+                OtpPurpose.REGISTRATION
+        )))
+                .isInstanceOf(InvalidVerificationCodeException.class);
+
+        assertThat(verification.getAttempts()).isEqualTo(1);
+        verifyNoInteractions(restClient);
+    }
 
     @Test
     void sendOtpCodeRejectsWhenRegistrationOtpWasSentWithinCooldown() {
@@ -204,6 +270,26 @@ class SmsApplicationServiceTest {
                 null,
                 VerificationPurpose.REGISTRATION,
                 Instant.EPOCH
+        );
+    }
+
+    private VerificationEntity pendingVerification() {
+        return new VerificationEntity(
+                "+32468009911",
+                42L,
+                null,
+                VerificationPurpose.REGISTRATION,
+                NOW.plusSeconds(600)
+        );
+    }
+
+    private SmsApplicationService serviceWithSkippedSmsSending() {
+        return new SmsApplicationService(
+                restClient,
+                new SmsProviderProperties("https://sms.example", "api-key", "Your code is {OTP}", true, "000000"),
+                new OtpRateLimitProperties(Duration.ofHours(1), 5, 20),
+                verificationEntityRepository,
+                Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
 }

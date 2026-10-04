@@ -3,14 +3,14 @@ package com.mgrtech.sponti_api.availability.internal.application;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
-import com.mgrtech.sponti_api.availability.api.query.EffectiveAvailabilityQuery;
+import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 
 import java.time.Instant;
 import java.util.List;
 
-public interface AvailabilityFacade extends EffectiveAvailabilityQuery {
+public interface AvailabilityFacade {
 
     List<AvailabilityRuleView> getRules(Long userId);
 
@@ -23,5 +23,9 @@ public interface AvailabilityFacade extends EffectiveAvailabilityQuery {
     List<AvailabilityOverrideView> getOverrides(Long userId, Instant endsAfter);
 
     AvailabilityOverrideView createOverride(Long userId, CreateAvailabilityOverrideCommand command);
+
+    List<EffectiveAvailabilityView> getEffectiveAvailability(Long userId, Instant from, Instant to);
+
+    List<EffectiveAvailabilityView> getChannelEffectiveAvailability(Long userId, Instant from, Instant to);
 
 }

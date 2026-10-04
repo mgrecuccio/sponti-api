@@ -14,9 +14,9 @@ import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
 import com.mgrtech.sponti_api.user.api.UserPasswordFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
-import com.mgrtech.sponti_api.user.api.command.UpdatePreferencesCommand;
+import com.mgrtech.sponti_api.user.internal.application.command.UpdatePreferencesCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
-import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.internal.application.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
 import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
 import com.mgrtech.sponti_api.user.api.event.UserPhoneNumberChangedEvent;
@@ -51,7 +51,7 @@ import static com.mgrtech.sponti_api.user.internal.domain.UserPreferenceEntity.t
 
 @Service
 @AllArgsConstructor
-public class UserApplicationService implements
+class UserApplicationService implements
         UserFacade,
         UserPreferenceFacade,
         UserRegistrationFacade,

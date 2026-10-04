@@ -27,4 +27,6 @@ public interface NotificationHistoryRepository extends JpaRepository<Notificatio
             NotificationDeliveryStatus status,
             Instant now
     );
+
+    void deleteByUserId(Long userId);
 }

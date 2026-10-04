@@ -32,4 +32,6 @@ public interface ContactRelationshipRepository extends JpaRepository<ContactRela
             Long contactUserId,
             RelationshipStatus relationshipStatus
     );
+
+    void deleteByOwnerUserIdOrContactUserId(Long userId, Long contactUserId);
 }

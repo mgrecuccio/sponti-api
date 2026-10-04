@@ -2,7 +2,7 @@ package com.mgrtech.sponti_api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.mgrtech.sponti_api.auth.api.AuthFacade;
+import com.mgrtech.sponti_api.auth.internal.application.AuthFacade;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFacade;
 import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;

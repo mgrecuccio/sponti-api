@@ -1,6 +1,7 @@
-package com.mgrtech.sponti_api.auth.api;
+package com.mgrtech.sponti_api.auth.internal.application;
 
-import com.mgrtech.sponti_api.auth.api.command.*;
+import com.mgrtech.sponti_api.auth.internal.application.view.AuthTokens;
+import com.mgrtech.sponti_api.auth.internal.application.command.*;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
 import com.mgrtech.sponti_api.sms.api.view.VerificationView;
 
@@ -21,4 +22,6 @@ public interface AuthFacade {
     VerificationView recoverPassword(RecoverPasswordCommand command);
 
     void verifyPasswordRecovery(VerifyRecoveryPasswordCommand command);
+
+    void deleteAuthenticatedUser(Long userId);
 }

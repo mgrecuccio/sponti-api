@@ -1,8 +1,8 @@
 package com.mgrtech.sponti_api.auth.internal.web;
 
-import com.mgrtech.sponti_api.auth.api.AuthFacade;
-import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.command.*;
+import com.mgrtech.sponti_api.auth.internal.application.AuthFacade;
+import com.mgrtech.sponti_api.auth.internal.application.view.AuthTokens;
+import com.mgrtech.sponti_api.auth.internal.application.command.*;
 import com.mgrtech.sponti_api.shared.validation.ValidE164PhoneNumber;
 import com.mgrtech.sponti_api.sms.api.view.VerificationResultView;
 import com.mgrtech.sponti_api.sms.api.view.VerificationView;
@@ -119,6 +119,12 @@ class AuthController {
                 request.verificationId(),
                 request.otpCode()
         ));
+    }
+
+    @DeleteMapping("/me")
+    @SecurityRequirement(name = "bearerAuth")
+    void deleteMe(Authentication authentication) {
+        authFacade.deleteAuthenticatedUser(extractUserId(authentication));
     }
 
     @Schema(description = "Register request payload")

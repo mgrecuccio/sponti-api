@@ -33,7 +33,7 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.maskPhoneNumber;
 import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizedClientIp;
 
 @Service
-public class SmsApplicationService implements OtpFacade {
+class SmsApplicationService implements OtpFacade {
 
     private static final Logger log = LoggerFactory.getLogger(SmsApplicationService.class);
     private static final int OTP_SENT = 10;
@@ -73,21 +73,25 @@ public class SmsApplicationService implements OtpFacade {
 
         assertResendAllowed(command, verificationPurpose);
 
-        var request = new SmsBoxOtpRequest(
-                toSmsBoxNumber(receivedPhoneNumber),
-                smsProviderProperties.otpText()
-        );
-
-        var response = restClient.post()
-                .uri("/v2/otp/send")
-                .body(request)
-                .retrieve()
-                .body(SmsBoxOtpSendResponse.class);
-
-        if (response == null || response.code() != OTP_SENT) {
-            throw new PhoneVerificationException(
-                    "Unable to send verification code"
+        if (smsProviderProperties.skipSending()) {
+            log.info("Skipping OTP provider send for userId: {}, number: {}, purpose={}", userId, maskPhoneNumber(receivedPhoneNumber), verificationPurpose);
+        } else {
+            var request = new SmsBoxOtpRequest(
+                    toSmsBoxNumber(receivedPhoneNumber),
+                    smsProviderProperties.otpText()
             );
+
+            var response = restClient.post()
+                    .uri("/v2/otp/send")
+                    .body(request)
+                    .retrieve()
+                    .body(SmsBoxOtpSendResponse.class);
+
+            if (response == null || response.code() != OTP_SENT) {
+                throw new PhoneVerificationException(
+                        "Unable to send verification code"
+                );
+            }
         }
 
         var otpVerification = verificationEntityRepository.save(new VerificationEntity(
@@ -126,6 +130,16 @@ public class SmsApplicationService implements OtpFacade {
         }
 
         assertPhoneNumberOwnership(userId, verification.getPhoneNumber(), command.phoneNumber());
+
+        if (smsProviderProperties.skipSending()) {
+            if (smsProviderProperties.devOtpCode().equals(command.otpCode())) {
+                verification.markVerified();
+                log.info("OTP code for userId: {}, verificationId: {}, purpose={} verified with dev bypass", userId, verificationId, purpose);
+                return new VerificationResultView(userId, true);
+            }
+            verification.recordFailedAttempt();
+            throw new InvalidVerificationCodeException();
+        }
 
         var response = restClient.get()
                 .uri(uriBuilder -> uriBuilder

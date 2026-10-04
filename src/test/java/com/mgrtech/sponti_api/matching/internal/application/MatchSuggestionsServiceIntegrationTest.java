@@ -10,7 +10,7 @@ import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
-import com.mgrtech.sponti_api.matching.api.MatchingQuery;
+import com.mgrtech.sponti_api.matching.internal.application.MatchingQuery;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.matching.internal.application.command.CreateMatchCommand;
 import com.mgrtech.sponti_api.matching.internal.configuration.MatchingProperties;

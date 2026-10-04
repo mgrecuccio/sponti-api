@@ -2,7 +2,7 @@ package com.mgrtech.sponti_api.notification.internal.web;
 
 import com.mgrtech.sponti_api.notification.internal.application.DeviceTokenApplicationService;
 import com.mgrtech.sponti_api.notification.internal.application.command.RegisterDeviceTokenCommand;
-import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
+import com.mgrtech.sponti_api.notification.api.DevicePlatform;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

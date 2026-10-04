@@ -1,4 +1,4 @@
-package com.mgrtech.sponti_api.auth.api;
+package com.mgrtech.sponti_api.auth.internal.application.view;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

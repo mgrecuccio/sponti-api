@@ -2,6 +2,7 @@ package com.mgrtech.sponti_api.contact.internal.application;
 
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
 import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
@@ -33,7 +34,7 @@ import static com.mgrtech.sponti_api.shared.utils.StringUtils.normalizeE164Phone
 @Service
 @Transactional
 @AllArgsConstructor
-class ContactApplicationService implements ContactFacade {
+class ContactApplicationService implements ContactFacade, ContactQuery {
 
     private static final Logger log = LoggerFactory.getLogger(ContactApplicationService.class);
 
