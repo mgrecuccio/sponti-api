@@ -1,7 +1,7 @@
 package com.mgrtech.sponti_api.availability.internal.application;
 
 import com.mgrtech.sponti_api.shared.api.ChannelType;
-import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
+import com.mgrtech.sponti_api.availability.api.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityRuleEntity;
 import com.mgrtech.sponti_api.availability.internal.repository.AvailabilityOverrideRepository;
 import com.mgrtech.sponti_api.availability.internal.repository.AvailabilityRuleRepository;

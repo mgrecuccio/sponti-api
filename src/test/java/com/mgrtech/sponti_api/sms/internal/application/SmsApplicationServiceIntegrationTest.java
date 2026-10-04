@@ -7,7 +7,7 @@ import com.mgrtech.sponti_api.sms.internal.domain.VerificationStatus;
 import com.mgrtech.sponti_api.sms.internal.repository.VerificationEntityRepository;
 import com.mgrtech.sponti_api.user.api.UserRegistrationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
-import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.internal.application.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.internal.application.UserFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

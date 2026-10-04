@@ -1,6 +1,6 @@
 package com.mgrtech.sponti_api.notification.internal.application.command;
 
-import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
+import com.mgrtech.sponti_api.notification.api.DevicePlatform;
 
 public record RegisterDeviceTokenCommand(
         DevicePlatform platform,

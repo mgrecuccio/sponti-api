@@ -1,8 +1,7 @@
 package com.mgrtech.sponti_api.auth.internal.application;
 
-import com.mgrtech.sponti_api.auth.api.AuthFacade;
-import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.command.*;
+import com.mgrtech.sponti_api.auth.internal.application.view.AuthTokens;
+import com.mgrtech.sponti_api.auth.internal.application.command.*;
 import com.mgrtech.sponti_api.auth.internal.security.JwtProperties;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
@@ -21,6 +20,8 @@ import com.mgrtech.sponti_api.user.api.UserVerificationFacade;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.UpdateUserPasswordCommand;
 import com.mgrtech.sponti_api.user.api.command.VerifyUserPhoneCommand;
+import com.mgrtech.sponti_api.user.api.deletion.UserDeletionFacade;
+import com.mgrtech.sponti_api.shared.api.deletion.UserDeletionModule;
 import com.mgrtech.sponti_api.user.api.query.UserCredentialsQuery;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ class AuthApplicationService implements AuthFacade {
     private final JwtProperties jwtProperties;
     private final OperationalMetrics metrics;
     private final OtpFacade otpFacade;
+    private final UserDeletionFacade userDeletionFacade;
 
     @Override
     public AuthTokens register(RegisterCommand command) {
@@ -100,6 +102,11 @@ class AuthApplicationService implements AuthFacade {
                     return new BadCredentialsException("Bad Credentials");
                 });
 
+        if (!"ACTIVE".equals(user.status())) {
+            metrics.authFailure("inactive_user");
+            throw new BadCredentialsException("Bad credentials");
+        }
+
         if (!passwordEncoder.matches(command.password(), user.passwordHash())) {
             metrics.authFailure("bad_password");
             log.warn("Login rejected: bad credentials for number={}", maskPhoneNumber(command.phoneNumber()));
@@ -131,6 +138,11 @@ class AuthApplicationService implements AuthFacade {
 
         var user = userCredentialsQuery.findById(rotated.userId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!"ACTIVE".equals(user.status())) {
+            metrics.authFailure("inactive_user");
+            throw new BadCredentialsException("Bad credentials");
+        }
 
         String accessToken = jwtTokenService.issueAccessToken(
                 user.id(),
@@ -247,5 +259,13 @@ class AuthApplicationService implements AuthFacade {
         }
         log.info("Password not reset for phoneNumber={}, verificationId={}. Token verified=false",
                 maskedPhoneNumber, verificationId);
+    }
+
+    @Override
+    public void deleteAuthenticatedUser(Long userId) {
+        log.info("Delete authenticated user for userId={}", userId);
+        refreshTokenService.revokeAllForUser(userId);
+        userDeletionFacade.requestDeletion(userId);
+        userDeletionFacade.markTaskCompleted(userId, UserDeletionModule.AUTH);
     }
 }

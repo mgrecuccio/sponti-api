@@ -10,6 +10,7 @@ import com.mgrtech.sponti_api.matching.api.ContactLinkType;
 import com.mgrtech.sponti_api.matching.api.ContactLinkView;
 import com.mgrtech.sponti_api.matching.api.MatchInvitationView;
 import com.mgrtech.sponti_api.matching.api.MatchView;
+import com.mgrtech.sponti_api.matching.internal.application.MatchingQuery;
 import com.mgrtech.sponti_api.matching.api.SuggestedMatchView;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalAcceptedEvent;
 import com.mgrtech.sponti_api.matching.api.event.MatchProposalCreatedEvent;
@@ -42,11 +43,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.mgrtech.sponti_api.matching.api.MatchView.toMatchView;
-
 @Service
 @AllArgsConstructor
-public class MatchSuggestionsService implements MatchingFacade {
+class MatchSuggestionsService implements MatchingFacade, MatchingQuery {
 
     private static final Logger log = LoggerFactory.getLogger(MatchSuggestionsService.class);
 
@@ -136,7 +135,7 @@ public class MatchSuggestionsService implements MatchingFacade {
                     now
             );
 
-            eventPublisher.publishEvent(MatchProposalCreatedEvent.from(proposal));
+            eventPublisher.publishEvent(toCreatedEvent(proposal));
             metrics.matchProposalCreated(proposal.getChannelType().name());
             log.info(
                     "Match proposal created: proposalId={} initiatorUserId={} candidateUserId={} channel={} score={}",
@@ -170,7 +169,7 @@ public class MatchSuggestionsService implements MatchingFacade {
 
         proposal.acceptBy(candidateUserId);
         metrics.matchProposalResponded("accepted");
-        eventPublisher.publishEvent(MatchProposalAcceptedEvent.from(proposal));
+        eventPublisher.publishEvent(toAcceptedEvent(proposal));
 
         log.info("Proposal id = {} accepted by candidate user id = {}", proposal.getId(), candidateUserId);
         return toMatchView(proposal);
@@ -282,7 +281,7 @@ public class MatchSuggestionsService implements MatchingFacade {
 
         return proposals
                 .stream()
-                .map(proposal -> MatchInvitationView.toMatchInvitationView(
+                .map(proposal -> toMatchInvitationView(
                         proposal,
                         userId,
                         displayName(profilesById, proposal.getInitiatorUserId()),
@@ -295,6 +294,68 @@ public class MatchSuggestionsService implements MatchingFacade {
         return Optional.ofNullable(profilesById.get(userId))
                 .map(UserProfileView::displayName)
                 .orElse(null);
+    }
+
+    private MatchProposalCreatedEvent toCreatedEvent(MatchProposalEntity proposal) {
+        return new MatchProposalCreatedEvent(
+                proposal.getId(),
+                proposal.getInitiatorUserId(),
+                proposal.getCandidateUserId(),
+                proposal.getChannelType(),
+                proposal.getOverlapStart(),
+                proposal.getOverlapEnd()
+        );
+    }
+
+    private MatchProposalAcceptedEvent toAcceptedEvent(MatchProposalEntity proposal) {
+        return new MatchProposalAcceptedEvent(
+                proposal.getId(),
+                proposal.getInitiatorUserId(),
+                proposal.getCandidateUserId()
+        );
+    }
+
+    private MatchView toMatchView(MatchProposalEntity entity) {
+        return new MatchView(
+                entity.getId(),
+                entity.getCandidateUserId(),
+                entity.getChannelType(),
+                entity.getStatus().name(),
+                entity.getScore(),
+                entity.getOverlapStart(),
+                entity.getOverlapEnd(),
+                entity.getCreatedAt(),
+                entity.getRespondedAt()
+        );
+    }
+
+    private MatchInvitationView toMatchInvitationView(
+            MatchProposalEntity entity,
+            Long currentUserId,
+            String initiatorDisplayName,
+            String candidateDisplayName
+    ) {
+        var otherParticipantUserId = entity.otherParticipantId(currentUserId);
+        var otherParticipantDisplayName = entity.getInitiatorUserId().equals(otherParticipantUserId)
+                ? initiatorDisplayName
+                : candidateDisplayName;
+
+        return new MatchInvitationView(
+                entity.getId(),
+                entity.getInitiatorUserId(),
+                initiatorDisplayName,
+                entity.getCandidateUserId(),
+                candidateDisplayName,
+                otherParticipantUserId,
+                otherParticipantDisplayName,
+                entity.getChannelType(),
+                entity.getStatus().name(),
+                entity.getScore(),
+                entity.getOverlapStart(),
+                entity.getOverlapEnd(),
+                entity.getCreatedAt(),
+                entity.getRespondedAt()
+        );
     }
 
     private MatchProposalEntity createProposal(

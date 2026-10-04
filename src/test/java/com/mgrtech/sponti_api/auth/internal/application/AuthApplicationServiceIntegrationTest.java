@@ -2,12 +2,12 @@ package com.mgrtech.sponti_api.auth.internal.application;
 
 import com.mgrtech.sponti_api.DatabaseCleaner;
 import com.mgrtech.sponti_api.FullIntegrationTest;
-import com.mgrtech.sponti_api.auth.api.AuthFacade;
-import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.command.RecoverPasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRecoveryPasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.AuthFacade;
+import com.mgrtech.sponti_api.auth.internal.application.command.ChangePasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.RecoverPasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.VerifyRecoveryPasswordCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
@@ -16,6 +16,7 @@ import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,6 +32,9 @@ class AuthApplicationServiceIntegrationTest {
 
     @Autowired
     JwtTokenService jwtTokenService;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void cleanDatabase() {
@@ -112,6 +116,18 @@ class AuthApplicationServiceIntegrationTest {
     }
 
     @Test
+    void login_throws_bad_credentials_when_user_is_deleted() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+        markUserDeleted(jwtTokenService.extractUserId(registered.accessToken()));
+
+        assertThatThrownBy(() -> authFacade.login(
+                new LoginCommand("+32468009911", "password")
+        )).isInstanceOf(BadCredentialsException.class);
+    }
+
+    @Test
     void refresh_rotates_refresh_token_and_returns_new_access_token() {
         var registered = authFacade.register(
                 getRegistrationCommand()
@@ -126,6 +142,17 @@ class AuthApplicationServiceIntegrationTest {
         assertThat(refreshed.expiresInSeconds()).isPositive();
 
         assertThat(refreshed.refreshToken()).isNotEqualTo(registered.refreshToken());
+    }
+
+    @Test
+    void refresh_throws_bad_credentials_when_user_is_deleted() {
+        var registered = authFacade.register(
+                getRegistrationCommand()
+        );
+        markUserDeleted(jwtTokenService.extractUserId(registered.accessToken()));
+
+        assertThatThrownBy(() -> authFacade.refresh(registered.refreshToken()))
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
@@ -250,5 +277,9 @@ class AuthApplicationServiceIntegrationTest {
 
     private static @NonNull RegisterCommand getRegistrationCommand() {
         return new RegisterCommand("password", "John", "+32468009911", "UTC");
+    }
+
+    private void markUserDeleted(Long userId) {
+        jdbcTemplate.update("UPDATE users SET status = 'DELETED' WHERE id = ?", userId);
     }
 }

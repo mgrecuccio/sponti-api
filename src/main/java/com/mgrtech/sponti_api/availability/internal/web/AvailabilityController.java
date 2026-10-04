@@ -8,7 +8,7 @@ import com.mgrtech.sponti_api.availability.internal.application.view.Availabilit
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
-import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
+import com.mgrtech.sponti_api.availability.api.AvailabilityOverrideType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

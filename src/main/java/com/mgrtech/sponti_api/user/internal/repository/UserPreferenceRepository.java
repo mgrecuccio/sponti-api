@@ -18,4 +18,6 @@ public interface UserPreferenceRepository extends JpaRepository<UserPreferenceEn
                or preferences.allowCall = true
             """)
     List<Long> findMatchingEnabledUserIds();
+
+    void deleteByUserId(Long userId);
 }

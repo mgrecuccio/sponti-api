@@ -35,4 +35,6 @@ public interface VerificationEntityRepository extends JpaRepository<Verification
             VerificationPurpose purpose,
             VerificationStatus status
     );
+
+    void deleteByUserId(Long userId);
 }

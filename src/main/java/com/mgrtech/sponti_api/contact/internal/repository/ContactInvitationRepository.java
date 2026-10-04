@@ -33,4 +33,6 @@ public interface ContactInvitationRepository extends JpaRepository<ContactInvita
             Long recipientUserId,
             InvitationStatus status
     );
+
+    void deleteBySenderUserIdOrRecipientUserId(Long senderUserId, Long recipientUserId);
 }

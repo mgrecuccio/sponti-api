@@ -26,3 +26,8 @@ app:
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:0123456789012345678901234567890123456789012345678901234567890123}
+
+sponti:
+  smsbox:
+    skip-sending: true
+    dev-otp-code: ${SPONTI_DEV_OTP_CODE:000000}

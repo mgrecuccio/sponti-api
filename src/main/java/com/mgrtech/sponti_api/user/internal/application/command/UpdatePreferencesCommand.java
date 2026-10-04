@@ -1,4 +1,4 @@
-package com.mgrtech.sponti_api.user.api.command;
+package com.mgrtech.sponti_api.user.internal.application.command;
 
 import java.time.LocalTime;
 

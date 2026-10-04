@@ -6,7 +6,7 @@ import com.mgrtech.sponti_api.availability.internal.application.AvailabilityFaca
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityOverrideCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.CreateAvailabilityRuleCommand;
 import com.mgrtech.sponti_api.availability.internal.application.command.UpdateAvailabilityRuleCommand;
-import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
+import com.mgrtech.sponti_api.availability.api.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityRuleView;
 import com.mgrtech.sponti_api.availability.api.view.EffectiveAvailabilityView;

@@ -2,7 +2,7 @@ package com.mgrtech.sponti_api.user.internal.application;
 
 import com.mgrtech.sponti_api.shared.error.TooManyAttemptsException;
 import com.mgrtech.sponti_api.sms.api.OtpFacade;
-import com.mgrtech.sponti_api.user.api.command.UpdateUserCommand;
+import com.mgrtech.sponti_api.user.internal.application.command.UpdateUserCommand;
 import com.mgrtech.sponti_api.user.api.command.CreateUserCommand;
 import com.mgrtech.sponti_api.user.api.event.UserCreatedEvent;
 import com.mgrtech.sponti_api.user.api.event.UserPhoneNumberChangedEvent;

@@ -99,4 +99,6 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
             Long initiatorUserId,
             Long candidateUserId
     );
+
+    void deleteByInitiatorUserIdOrCandidateUserId(Long initiatorUserId, Long candidateUserId);
 }

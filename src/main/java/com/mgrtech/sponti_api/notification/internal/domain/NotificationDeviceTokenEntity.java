@@ -1,5 +1,6 @@
 package com.mgrtech.sponti_api.notification.internal.domain;
 
+import com.mgrtech.sponti_api.notification.api.DevicePlatform;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -1,7 +1,7 @@
 package com.mgrtech.sponti_api.availability.internal.domain;
 
 import com.mgrtech.sponti_api.availability.internal.application.view.AvailabilityOverrideView;
-import com.mgrtech.sponti_api.availability.internal.domain.AvailabilityOverrideType;
+import com.mgrtech.sponti_api.availability.api.AvailabilityOverrideType;
 import com.mgrtech.sponti_api.availability.internal.exception.InvalidAvailabilityOverrideTimeRangeException;
 import jakarta.persistence.*;
 import lombok.Getter;

@@ -1,14 +1,14 @@
 package com.mgrtech.sponti_api.auth.internal.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mgrtech.sponti_api.auth.api.AuthFacade;
-import com.mgrtech.sponti_api.auth.api.AuthTokens;
-import com.mgrtech.sponti_api.auth.api.command.ChangePasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.LoginCommand;
-import com.mgrtech.sponti_api.auth.api.command.RecoverPasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.RegisterCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRecoveryPasswordCommand;
-import com.mgrtech.sponti_api.auth.api.command.VerifyRegistrationPhoneCommand;
+import com.mgrtech.sponti_api.auth.internal.application.AuthFacade;
+import com.mgrtech.sponti_api.auth.internal.application.view.AuthTokens;
+import com.mgrtech.sponti_api.auth.internal.application.command.ChangePasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.LoginCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.RecoverPasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.RegisterCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.VerifyRecoveryPasswordCommand;
+import com.mgrtech.sponti_api.auth.internal.application.command.VerifyRegistrationPhoneCommand;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.shared.error.BadCredentialsException;
 import com.mgrtech.sponti_api.shared.error.InvalidRefreshTokenException;
@@ -227,6 +227,24 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_returns_unauthorized_when_user_is_deleted() throws Exception {
+        var request = new AuthController.LoginRequest(
+                "+32468009911",
+                "password"
+        );
+
+        given(authFacade.login(new LoginCommand(request.phoneNumber(), request.password())))
+                .willThrow(new BadCredentialsException("Bad credentials"));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"))
+                .andExpect(jsonPath("$.detail").value("Bad credentials"));
+    }
+
+    @Test
     void refresh_returns_new_auth_tokens() throws Exception {
         var request = new AuthController.RefreshRequest("refreshToken");
 
@@ -276,6 +294,21 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
                 .andExpect(jsonPath("$.detail").value("Invalid refresh token"));
+    }
+
+    @Test
+    void refresh_returns_unauthorized_when_user_is_deleted() throws Exception {
+        var request = new AuthController.RefreshRequest("refresh-token");
+
+        given(authFacade.refresh(request.refreshToken()))
+                .willThrow(new BadCredentialsException("Bad credentials"));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BAD_CREDENTIALS"))
+                .andExpect(jsonPath("$.detail").value("Bad credentials"));
     }
 
     @Test

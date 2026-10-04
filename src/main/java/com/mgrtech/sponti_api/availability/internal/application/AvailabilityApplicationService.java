@@ -26,7 +26,7 @@ import static com.mgrtech.sponti_api.availability.internal.domain.AvailabilityRu
 @Service
 @Transactional
 @AllArgsConstructor
-public class AvailabilityApplicationService implements AvailabilityFacade, EffectiveAvailabilityQuery {
+class AvailabilityApplicationService implements AvailabilityFacade, EffectiveAvailabilityQuery {
 
     private static final Logger log = LoggerFactory.getLogger(AvailabilityApplicationService.class);
     private final AvailabilityRuleRepository availabilityRuleRepository;

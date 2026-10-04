@@ -3,7 +3,7 @@ package com.mgrtech.sponti_api.notification.internal.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mgrtech.sponti_api.auth.internal.security.JwtTokenService;
 import com.mgrtech.sponti_api.notification.internal.application.DeviceTokenApplicationService;
-import com.mgrtech.sponti_api.notification.internal.domain.DevicePlatform;
+import com.mgrtech.sponti_api.notification.api.DevicePlatform;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;

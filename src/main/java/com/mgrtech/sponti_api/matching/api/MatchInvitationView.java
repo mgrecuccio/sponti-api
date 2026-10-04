@@ -1,6 +1,5 @@
 package com.mgrtech.sponti_api.matching.api;
 
-import com.mgrtech.sponti_api.matching.internal.domain.MatchProposalEntity;
 import com.mgrtech.sponti_api.shared.api.ChannelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -37,33 +36,4 @@ public record MatchInvitationView(
         @Schema(description = "Timestamp when candidate accepted or declined.", example = "2026-06-12T12:01:00Z", nullable = true)
         Instant respondedAt
 ) {
-
-    public static MatchInvitationView toMatchInvitationView(
-            MatchProposalEntity entity,
-            Long currentUserId,
-            String initiatorDisplayName,
-            String candidateDisplayName
-    ) {
-        var otherParticipantUserId = entity.otherParticipantId(currentUserId);
-        var otherParticipantDisplayName = entity.getInitiatorUserId().equals(otherParticipantUserId)
-                ? initiatorDisplayName
-                : candidateDisplayName;
-
-        return new MatchInvitationView(
-                entity.getId(),
-                entity.getInitiatorUserId(),
-                initiatorDisplayName,
-                entity.getCandidateUserId(),
-                candidateDisplayName,
-                otherParticipantUserId,
-                otherParticipantDisplayName,
-                entity.getChannelType(),
-                entity.getStatus().name(),
-                entity.getScore(),
-                entity.getOverlapStart(),
-                entity.getOverlapEnd(),
-                entity.getCreatedAt(),
-                entity.getRespondedAt()
-        );
-    }
 }

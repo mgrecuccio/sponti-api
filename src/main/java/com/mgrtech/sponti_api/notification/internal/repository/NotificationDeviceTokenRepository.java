@@ -13,4 +13,6 @@ public interface NotificationDeviceTokenRepository extends JpaRepository<Notific
     List<NotificationDeviceTokenEntity> findByUserIdAndEnabledTrue(Long userId);
 
     Optional<NotificationDeviceTokenEntity> findByUserIdAndToken(Long userId, String token);
+
+    void deleteByUserId(Long userId);
 }
