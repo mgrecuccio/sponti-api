@@ -521,7 +521,7 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
-    void remove_contact_hides_it_from_accepted_contacts() {
+    void remove_contact_hides_it_from_accepted_contacts_for_both_users() {
         var sender = userRegistrationFacade.createUser(
                 createUserCommand(
                         "sender",
@@ -548,7 +548,56 @@ class ContactApplicationServiceIntegrationTest {
         contactFacade.removeContact(sender.id(), recipient.id());
 
         assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
-        assertThat(contactFacade.getAcceptedContacts(recipient.id())).hasSize(1);
+        assertThat(contactFacade.getAcceptedContacts(recipient.id())).isEmpty();
+    }
+
+    @Test
+    void removed_contact_can_be_reinvited_and_accepted_again() {
+        var sender = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "readd-sender",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipient = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "readd-recipient",
+                        "hash",
+                        "Recipient",
+                        "UTC"
+                )
+        );
+
+        var invitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.phoneNumber(), "Teammate")
+        );
+        contactFacade.acceptInvitation(recipient.id(), invitation.id());
+        contactFacade.removeContact(sender.id(), recipient.id());
+
+        assertThat(contactFacade.getAcceptedContacts(sender.id())).isEmpty();
+        assertThat(contactFacade.getAcceptedContacts(recipient.id())).isEmpty();
+
+        var reinvitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipient.phoneNumber(), "Teammate again")
+        );
+
+        assertThat(contactFacade.getPendingIncomingInvitations(recipient.id()))
+                .extracting(pending -> pending.invitationId())
+                .containsExactly(reinvitation.id());
+
+        contactFacade.acceptInvitation(recipient.id(), reinvitation.id());
+
+        assertThat(contactFacade.getPendingIncomingInvitations(recipient.id())).isEmpty();
+        assertThat(contactFacade.getAcceptedContacts(sender.id()))
+                .extracting(ContactView::contactUserId)
+                .containsExactly(recipient.id());
+        assertThat(contactFacade.getAcceptedContacts(recipient.id()))
+                .extracting(ContactView::contactUserId)
+                .containsExactly(sender.id());
     }
 
     @Test
