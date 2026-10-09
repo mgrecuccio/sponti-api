@@ -34,5 +34,10 @@ public interface ContactInvitationRepository extends JpaRepository<ContactInvita
             InvitationStatus status
     );
 
+    List<ContactInvitationEntity> findAllBySenderUserIdAndStatusOrderByCreatedAtDesc(
+            Long senderUserId,
+            InvitationStatus status
+    );
+
     void deleteBySenderUserIdOrRecipientUserId(Long senderUserId, Long recipientUserId);
 }

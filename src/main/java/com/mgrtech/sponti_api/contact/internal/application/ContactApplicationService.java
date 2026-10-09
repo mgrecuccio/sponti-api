@@ -1,8 +1,10 @@
 package com.mgrtech.sponti_api.contact.internal.application;
 
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationsView;
 import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.query.ContactQuery;
+import com.mgrtech.sponti_api.contact.api.view.PendingSentContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
@@ -353,6 +355,15 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
 
     @Override
     @Transactional(readOnly = true)
+    public PendingContactInvitationsView getPendingInvitations(Long userId) {
+        return new PendingContactInvitationsView(
+                getPendingIncomingInvitations(userId),
+                getPendingSentInvitations(userId)
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PendingContactInvitationView> getPendingIncomingInvitations(Long recipientUserId) {
         var senderProfiles = new HashMap<Long, SenderProfile>();
 
@@ -360,6 +371,18 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
                 .findAllByRecipientUserIdAndStatusOrderByCreatedAtDesc(recipientUserId, InvitationStatus.PENDING)
                 .stream()
                 .map(invitation -> toPendingInvitationView(invitation, senderProfiles))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingSentContactInvitationView> getPendingSentInvitations(Long senderUserId) {
+        var recipientProfiles = new HashMap<Long, RecipientProfile>();
+
+        return contactInvitationRepository
+                .findAllBySenderUserIdAndStatusOrderByCreatedAtDesc(senderUserId, InvitationStatus.PENDING)
+                .stream()
+                .map(invitation -> toPendingSentInvitationView(invitation, recipientProfiles))
                 .toList();
     }
 
@@ -404,5 +427,33 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
                 .orElseGet(() -> new SenderProfile(null, null));
     }
 
+    private PendingSentContactInvitationView toPendingSentInvitationView(
+            ContactInvitationEntity invitation,
+            Map<Long, RecipientProfile> recipientProfiles
+    ) {
+        var recipientProfile = recipientProfiles.computeIfAbsent(
+                invitation.getRecipientUserId(),
+                this::loadRecipientProfile
+        );
+
+        return new PendingSentContactInvitationView(
+                invitation.getId(),
+                invitation.getRecipientUserId(),
+                recipientProfile.phoneNumber(),
+                recipientProfile.displayName(),
+                invitation.getNickName(),
+                invitation.getStatusString(),
+                invitation.getCreatedAt()
+        );
+    }
+
+    private RecipientProfile loadRecipientProfile(Long recipientUserId) {
+        return userProfileQuery.getProfileById(recipientUserId)
+                .map(profile -> new RecipientProfile(profile.phoneNumber(), profile.displayName()))
+                .orElseGet(() -> new RecipientProfile(null, null));
+    }
+
     private record SenderProfile(String phoneNumber, String displayName) {}
+
+    private record RecipientProfile(String phoneNumber, String displayName) {}
 }
