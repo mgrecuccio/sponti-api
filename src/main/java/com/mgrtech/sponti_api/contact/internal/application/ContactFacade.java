@@ -4,7 +4,9 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationsView;
 import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingSentContactInvitationView;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +17,11 @@ public interface ContactFacade {
 
     Optional<ContactView> findAcceptedContact(Long userId, Long candidateUserId);
 
+    PendingContactInvitationsView getPendingInvitations(Long userId);
+
     List<PendingContactInvitationView> getPendingIncomingInvitations(Long recipientUserId);
+
+    List<PendingSentContactInvitationView> getPendingSentInvitations(Long senderUserId);
 
     ContactInvitationView sendInvitation(Long senderUserId, SendContactInvitationCommand command);
 

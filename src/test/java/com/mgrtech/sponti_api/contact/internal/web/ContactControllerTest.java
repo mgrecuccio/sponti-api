@@ -7,7 +7,9 @@ import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCo
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
 import com.mgrtech.sponti_api.contact.internal.application.view.ContactInvitationView;
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationsView;
 import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingSentContactInvitationView;
 import com.mgrtech.sponti_api.contact.internal.exception.ContactInviteeNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -275,24 +277,41 @@ class ContactControllerTest {
 
     @Test
     void returns_pending_invitations_for_authenticated_user() throws Exception {
-        given(contactFacade.getPendingIncomingInvitations(42L))
-                .willReturn(List.of(new PendingContactInvitationView(
-                        110L,
-                        18L,
-                        "+32468009911",
-                        "Sender",
-                        "PENDING",
-                        Instant.now()
-                )));
+        given(contactFacade.getPendingInvitations(42L))
+                .willReturn(new PendingContactInvitationsView(
+                        List.of(new PendingContactInvitationView(
+                                110L,
+                                18L,
+                                "+32468009911",
+                                "Sender",
+                                "PENDING",
+                                Instant.now()
+                        )),
+                        List.of(new PendingSentContactInvitationView(
+                                111L,
+                                19L,
+                                "+32468009912",
+                                "Recipient",
+                                "Teammate",
+                                "PENDING",
+                                Instant.now()
+                        ))
+                ));
 
         mockMvc.perform(get("/api/v1/contacts/invitations/pending")
                         .principal(new TestingAuthenticationToken("42", null)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].invitationId").value(110L))
-                .andExpect(jsonPath("$[0].senderUserId").value(18L))
-                .andExpect(jsonPath("$[0].senderPhoneNumber").value("+32468009911"))
-                .andExpect(jsonPath("$[0].senderDisplayName").value("Sender"))
-                .andExpect(jsonPath("$[0].nickName").doesNotExist())
-                .andExpect(jsonPath("$[0].status").value("PENDING"));
+                .andExpect(jsonPath("$.incoming[0].invitationId").value(110L))
+                .andExpect(jsonPath("$.incoming[0].senderUserId").value(18L))
+                .andExpect(jsonPath("$.incoming[0].senderPhoneNumber").value("+32468009911"))
+                .andExpect(jsonPath("$.incoming[0].senderDisplayName").value("Sender"))
+                .andExpect(jsonPath("$.incoming[0].nickName").doesNotExist())
+                .andExpect(jsonPath("$.incoming[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.sent[0].invitationId").value(111L))
+                .andExpect(jsonPath("$.sent[0].recipientUserId").value(19L))
+                .andExpect(jsonPath("$.sent[0].recipientPhoneNumber").value("+32468009912"))
+                .andExpect(jsonPath("$.sent[0].recipientDisplayName").value("Recipient"))
+                .andExpect(jsonPath("$.sent[0].nickName").value("Teammate"))
+                .andExpect(jsonPath("$.sent[0].status").value("PENDING"));
     }
 }

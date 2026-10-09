@@ -826,6 +826,91 @@ class ContactApplicationServiceIntegrationTest {
     }
 
     @Test
+    void get_pending_sent_invitations_returns_only_pending_for_sender_in_desc_order() {
+        var sender = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "sender",
+                        "hash",
+                        "Sender",
+                        "UTC"
+                )
+        );
+        var recipientOne = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "recipient-one",
+                        "hash",
+                        "Recipient One",
+                        "UTC"
+                )
+        );
+        var recipientTwo = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "recipient-two",
+                        "hash",
+                        "Recipient Two",
+                        "UTC"
+                )
+        );
+        var recipientThree = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "recipient-three",
+                        "hash",
+                        "Recipient Three",
+                        "UTC"
+                )
+        );
+        var otherSender = userRegistrationFacade.createUser(
+                createUserCommand(
+                        "other-sender",
+                        "hash",
+                        "Other Sender",
+                        "UTC"
+                )
+        );
+
+        var acceptedInvitation = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipientOne.phoneNumber(), "Old teammate")
+        );
+        contactFacade.acceptInvitation(recipientOne.id(), acceptedInvitation.id());
+
+        var pendingToRecipientOne = contactFacade.sendInvitation(
+                otherSender.id(),
+                new SendContactInvitationCommand(recipientOne.phoneNumber(), "Other sender invitation")
+        );
+
+        var pendingToRecipientTwo = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipientTwo.phoneNumber(), "New teammate Two")
+        );
+        var pendingToRecipientThree = contactFacade.sendInvitation(
+                sender.id(),
+                new SendContactInvitationCommand(recipientThree.phoneNumber(), "New teammate Three")
+        );
+
+        var pending = contactFacade.getPendingSentInvitations(sender.id());
+
+        assertThat(pending).hasSize(2);
+        assertThat(pending.getFirst().invitationId()).isEqualTo(pendingToRecipientThree.id());
+        assertThat(pending.getFirst().recipientUserId()).isEqualTo(recipientThree.id());
+        assertThat(pending.getFirst().recipientPhoneNumber()).isEqualTo(recipientThree.phoneNumber());
+        assertThat(pending.getFirst().recipientDisplayName()).isEqualTo(recipientThree.displayName());
+        assertThat(pending.getFirst().nickName()).isEqualTo("New teammate Three");
+        assertThat(pending.getFirst().status()).isEqualTo("PENDING");
+
+        assertThat(pending.get(1).invitationId()).isEqualTo(pendingToRecipientTwo.id());
+        assertThat(pending.get(1).recipientUserId()).isEqualTo(recipientTwo.id());
+        assertThat(pending.get(1).recipientPhoneNumber()).isEqualTo(recipientTwo.phoneNumber());
+        assertThat(pending.get(1).recipientDisplayName()).isEqualTo(recipientTwo.displayName());
+        assertThat(pending.get(1).nickName()).isEqualTo("New teammate Two");
+        assertThat(pending.get(1).status()).isEqualTo("PENDING");
+
+        assertThat(contactFacade.getPendingSentInvitations(otherSender.id()))
+                .extracting(sent -> sent.invitationId())
+                .containsExactly(pendingToRecipientOne.id());
+    }
+
+    @Test
     void find_accepted_contact_returns_null_if_relationship_does_not_exist() {
         var userA = userRegistrationFacade.createUser(
                 createUserCommand(

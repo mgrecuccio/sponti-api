@@ -1,7 +1,7 @@
 package com.mgrtech.sponti_api.contact.internal.web;
 
 import com.mgrtech.sponti_api.contact.api.view.ContactView;
-import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationView;
+import com.mgrtech.sponti_api.contact.api.view.PendingContactInvitationsView;
 import com.mgrtech.sponti_api.contact.internal.application.ContactFacade;
 import com.mgrtech.sponti_api.contact.internal.application.command.EditContactCommand;
 import com.mgrtech.sponti_api.contact.internal.application.command.SendContactInvitationCommand;
@@ -146,10 +146,10 @@ class ContactController {
     }
 
     @GetMapping("/invitations/pending")
-    @Operation(summary = "List pending incoming invitations", description = "Mobile pending invitations screen. Returns only pending invitations addressed to the authenticated user.")
-    public List<PendingContactInvitationView> getPendingInvitations(Authentication authentication) {
-        var recipientUserId = extractUserId(authentication);
-        return contactFacade.getPendingIncomingInvitations(recipientUserId);
+    @Operation(summary = "List pending invitations", description = "Mobile pending invitations screen. Returns pending invitations addressed to and created by the authenticated user.")
+    public PendingContactInvitationsView getPendingInvitations(Authentication authentication) {
+        var userId = extractUserId(authentication);
+        return contactFacade.getPendingInvitations(userId);
     }
 
     @Schema(description = "Send Contact Invitation request payload")
