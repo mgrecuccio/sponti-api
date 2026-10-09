@@ -97,6 +97,12 @@ public class ContactRelationshipEntity {
         this.updatedAt = now;
     }
 
+    public void accept(String nickname, Instant now) {
+        this.relationshipStatus = RelationshipStatus.ACCEPTED;
+        this.nickname = nickname;
+        this.updatedAt = now;
+    }
+
     public void remove(Instant now) {
         this.relationshipStatus = RelationshipStatus.REMOVED;
         this.updatedAt = now;

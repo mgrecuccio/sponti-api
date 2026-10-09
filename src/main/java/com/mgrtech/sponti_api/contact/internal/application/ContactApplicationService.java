@@ -68,9 +68,7 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
             throw new ContactBlockedException();
         }
 
-        if(contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
-                senderUserId, recipientUserId, RelationshipStatus.ACCEPTED
-        )) {
+        if (hasMutualAcceptedRelationship(senderUserId, recipientUserId)) {
             log.warn("Send invitation blocked: relationship already exists for senderUserId={} and recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactAlreadyExistsException();
         }
@@ -144,8 +142,7 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
 
         var senderUserId = invitation.getSenderUserId();
 
-        if (contactRelationshipRepository.findByOwnerUserIdAndContactUserId(senderUserId, recipientUserId).isPresent()
-                || contactRelationshipRepository.findByOwnerUserIdAndContactUserId(recipientUserId, senderUserId).isPresent()) {
+        if (hasMutualAcceptedRelationship(senderUserId, recipientUserId)) {
             log.warn("Accepting invitation blocked: relationship already exists for senderUserId={} and recipientUserId={}", senderUserId, recipientUserId);
             throw new ContactAlreadyExistsException();
         }
@@ -157,19 +154,25 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
 
         invitation.accept(now);
 
-        var senderSide = ContactRelationshipEntity.accepted(
-                senderUserId,
-                recipientUserId,
-                invitation.getNickName(),
-                now
-        );
+        var senderSide = contactRelationshipRepository
+                .findByOwnerUserIdAndContactUserId(senderUserId, recipientUserId)
+                .orElseGet(() -> ContactRelationshipEntity.accepted(
+                        senderUserId,
+                        recipientUserId,
+                        invitation.getNickName(),
+                        now
+                ));
+        senderSide.accept(invitation.getNickName(), now);
 
-        var recipientSide = ContactRelationshipEntity.accepted(
-                recipientUserId,
-                senderUserId,
-                null,
-                now
-        );
+        var recipientSide = contactRelationshipRepository
+                .findByOwnerUserIdAndContactUserId(recipientUserId, senderUserId)
+                .orElseGet(() -> ContactRelationshipEntity.accepted(
+                        recipientUserId,
+                        senderUserId,
+                        null,
+                        now
+                ));
+        recipientSide.accept(recipientSide.getNickname(), now);
 
         contactRelationshipRepository.save(senderSide);
         contactRelationshipRepository.save(recipientSide);
@@ -184,6 +187,7 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
                 .findAllByOwnerUserIdAndRelationshipStatusOrderByCreatedAtDesc(ownerUserId, RelationshipStatus.ACCEPTED)
                 .stream()
                 .filter(relationship -> !hasAnyBlockingRelationship(ownerUserId, relationship.getContactUserId()))
+                .filter(relationship -> hasMutualAcceptedRelationship(ownerUserId, relationship.getContactUserId()))
                 .toList();
 
         var profilesById = userProfileQuery.getProfilesByIds(
@@ -205,6 +209,7 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
         return contactRelationshipRepository
                 .findByOwnerUserIdAndAndContactUserIdAndRelationshipStatus(userId, candidateUserId, RelationshipStatus.ACCEPTED)
                 .filter(relationship -> !hasAnyBlockingRelationship(userId, candidateUserId))
+                .filter(relationship -> hasMutualAcceptedRelationship(userId, candidateUserId))
                 .map(this::toContactView);
     }
 
@@ -276,6 +281,9 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
                 .orElseThrow(ContactNotFoundException::new);
 
         relationship.remove(now);
+        contactRelationshipRepository
+                .findByOwnerUserIdAndContactUserId(contactUserId, ownerUserId)
+                .ifPresent(otherSide -> otherSide.remove(now));
         log.info("OwnerUserId={} removed contactUserId={}", ownerUserId, contactUserId);
     }
 
@@ -361,6 +369,14 @@ class ContactApplicationService implements ContactFacade, ContactQuery {
         ) || contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
                 recipientUserId, senderUserId, RelationshipStatus.BLOCKED
         ) ;
+    }
+
+    private boolean hasMutualAcceptedRelationship(Long firstUserId, Long secondUserId) {
+        return contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
+                firstUserId, secondUserId, RelationshipStatus.ACCEPTED
+        ) && contactRelationshipRepository.existsByOwnerUserIdAndContactUserIdAndRelationshipStatus(
+                secondUserId, firstUserId, RelationshipStatus.ACCEPTED
+        );
     }
 
     private PendingContactInvitationView toPendingInvitationView(
