@@ -679,7 +679,7 @@ public class MatchSuggestionsServiceIntegrationTest {
     }
 
     @Test
-    void get_accepted_matches_returns_accepted_matches_for_either_participant() {
+    void get_accepted_matches_returns_accepted_matches_for_either_participant_until_overlap_ends() {
         var user = createUser("accepted-user", "Accepted User");
         var candidate = createUser("accepted-candidate", "Accepted Candidate");
         var initiator = createUser("accepted-initiator", "Accepted Initiator");
@@ -758,10 +758,14 @@ public class MatchSuggestionsServiceIntegrationTest {
 
         assertThat(matches)
                 .extracting(MatchInvitationView::id)
-                .containsExactlyInAnyOrder(initiatedByUser.getId(), initiatedByOtherUser.getId());
+                .containsExactlyInAnyOrder(
+                        initiatedByUser.getId(),
+                        initiatedByOtherUser.getId(),
+                        futureAccepted.getId()
+                );
         assertThat(matches)
                 .extracting(MatchInvitationView::id)
-                .doesNotContain(futureAccepted.getId(), endedAccepted.getId());
+                .doesNotContain(endedAccepted.getId());
         assertThat(matches)
                 .anySatisfy(match -> {
                     assertThat(match.id()).isEqualTo(initiatedByUser.getId());
