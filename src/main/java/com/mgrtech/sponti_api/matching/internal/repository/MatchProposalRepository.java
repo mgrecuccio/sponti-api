@@ -32,8 +32,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
      * Finds matches visible to a user for a specific status.
      * Incoming proposals pass includeInitiated=false and requireUnexpired=true, so only active proposals
      * where the user is the candidate are returned. Accepted matches pass includeInitiated=true and
-     * requireActiveOverlap=true, so either participant can see accepted matches only during the
-     * availability overlap window.
+     * requireUnendedOverlap=true, so either participant can see accepted matches until the
+     * availability overlap window has ended.
      */
     @Query("""
             SELECT proposal
@@ -49,8 +49,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
                     OR proposal.expiresAt > :now
                   )
               AND (
-                    :requireActiveOverlap = false
-                    OR (proposal.overlapStart <= :now AND proposal.overlapEnd > :now)
+                    :requireUnendedOverlap = false
+                    OR proposal.overlapEnd > :now
                   )
             ORDER BY proposal.createdAt DESC
             """)
@@ -60,7 +60,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposalEnti
             Instant now,
             boolean includeInitiated,
             boolean requireUnexpired,
-            boolean requireActiveOverlap
+            boolean requireUnendedOverlap
     );
 
     @Query("""
